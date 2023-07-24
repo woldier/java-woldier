@@ -1,7 +1,7 @@
-package com.wolder.mapper;
+package com.woldier.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.wolder.entity.User;
+import com.woldier.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper

@@ -2,4 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.woldier.mapper.PlazaMapper">
 
+    <select id="getPlazaPage" resultType="com.woldier.entity.vo.PlazaVo">
+        SELECT p.*,u.nike_name,u.img
+        FROM user u join plaza p ON
+            u.id = p.user_id  ${ew.customSqlSegment}
+    </select>
+
 </mapper>

@@ -1,11 +1,11 @@
-package com.wolder.mapper;
+package com.woldier.mapper;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.wolder.entity.Plaza;
-import com.wolder.entity.vo.PlazaVo;
+import com.woldier.entity.Plaza;
+import com.woldier.entity.vo.PlazaVo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

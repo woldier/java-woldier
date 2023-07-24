@@ -1,4 +1,4 @@
-package com.wolder.entity;
+package com.woldier.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
