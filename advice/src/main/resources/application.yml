@@ -1,9 +1,9 @@
 spring:
-  profiles:
-    active: dev
+#  profiles:
+#    active: dev
   datasource:
-    url: jdbc:mysql://10.11.12.1:3307/woldier?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&autoReconnect=true
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.1.113:3307/woldier?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&autoReconnect=true
+    driver-class-name: com.mysql.jdbc.Driver
     username: root
     password: 123456
   application:
