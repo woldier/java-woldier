@@ -3,9 +3,14 @@
 <mapper namespace="com.woldier.mapper.PlazaMapper">
 
     <select id="getPlazaPage" resultType="com.woldier.entity.vo.PlazaVo">
-        SELECT p.*,u.nike_name,u.img
+        SELECT p.*,u.nike_name "nike_name",u.img "img"
         FROM user u join plaza p ON
-            u.id = p.user_id  ${ew.customSqlSegment}
+            u.id = p.user_id
+        <if test="ew != null">
+            <if test="ew.nonEmptyOfWhere">
+                AND
+            </if>
+            ${ew.sqlSegment}
+        </if>
     </select>
-
 </mapper>
