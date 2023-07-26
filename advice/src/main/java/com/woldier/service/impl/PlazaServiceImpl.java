@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.woldier.entity.Plaza;
 import com.woldier.entity.User;
+import com.woldier.entity.vo.PlazaTreeVo;
 import com.woldier.entity.vo.PlazaVo;
 import com.woldier.mapper.PlazaMapper;
 import com.woldier.service.PlazaService;
@@ -56,14 +57,40 @@ public class PlazaServiceImpl extends ServiceImplAdvice<PlazaMapper, Plaza> impl
      */
     @Override
     public Page<PlazaVo> getPage(int current, int size) {
+        List<Plaza> list= lambdaQuery().list();
+
+        //TODO 不同服务调用?跨库调用?
         return pageHelper(current,size, PlazaVo.class,
                 e->{
             User user = userService.getById(e.getUserId());
             e.setNikeName(user.getNikeName());
             e.setImg(user.getImg());
         });
+
+
+
+    }
+    @Override
+    public Page<PlazaVo> getPageV2(int current, int size) {
+        List<Plaza> list= lambdaQuery().list();
+        //TODO 不同服务调用?跨库调用?
+        return pageHelperV2(current,size, PlazaVo.class,
+                Plaza::getUserId,//告诉是对那个字段做id转name
+                userService::listByIds, // 查询语句
+                User::getId //告诉额外信息表的主键
+              );
     }
 
+    @Override
+    public Page<PlazaTreeVo> getPageV3(int current, int size) {
+        List<Plaza> list= lambdaQuery().list();
+        //TODO 不同服务调用?跨库调用?
+        return pageHelperV2(current,size, PlazaTreeVo.class,
+                Plaza::getUserId,//告诉是对那个字段做id转name
+                userService::listByIds, // 查询语句
+                User::getId //告诉额外信息表的主键
+        );
+    }
 
 
 }

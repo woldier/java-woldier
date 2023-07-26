@@ -17,4 +17,6 @@ public class Plaza implements Serializable {
     private String content;
     @TableField
     private Long userId;
+    @TableField
+    private Long parentId;
 }
