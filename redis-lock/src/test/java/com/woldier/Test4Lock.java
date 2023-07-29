@@ -60,46 +60,8 @@ public class Test4Lock {
 
     @Test
     public void testLock() throws InterruptedException {
-//        Thread thread1 = new Thread(() -> {
-//            RLock lock = redisLockUtils.createLock("woldier");
-//            lock.lock();
-//            try {
-//                method(); //重入
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            try {
-//                TimeUnit.SECONDS.sleep(20);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            lock.unlock();
-//        });
-//
-//
-//        Thread thread2 =new Thread(()->{
-//            RLock lock = redisLockUtils.createLock("woldier");
-//            lock.lock();
-//            try {
-//                method(); //重入
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            try {
-//                TimeUnit.SECONDS.sleep(20);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            lock.unlock();
-//        });
-//
-//        thread1.start();
-//        thread2.start();
-//
-//        thread2.join();
-//        thread1.join();
-
-        RLock lock = redisLockUtils.createLock("woldier");
+        Thread thread1 = new Thread(() -> {
+            RLock lock = redisLockUtils.createLock("woldier");
             lock.lock();
             try {
                 method(); //重入
@@ -112,7 +74,45 @@ public class Test4Lock {
                 throw new RuntimeException(e);
             }
             lock.unlock();
-            Thread.sleep(55_000L);
+        });
+
+
+        Thread thread2 =new Thread(()->{
+            RLock lock = redisLockUtils.createLock("woldier");
+            lock.lock();
+            try {
+                method(); //重入
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                TimeUnit.SECONDS.sleep(25);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            lock.unlock();
+        });
+
+        thread1.start();
+        thread2.start();
+
+        thread2.join();
+        thread1.join();
+
+//        RLock lock = redisLockUtils.createLock("woldier");
+//            lock.lock();
+//            try {
+//                method(); //重入
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//            try {
+//                TimeUnit.SECONDS.sleep(25);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//            lock.unlock();
+//            Thread.sleep(55_000L);
 
     }
 

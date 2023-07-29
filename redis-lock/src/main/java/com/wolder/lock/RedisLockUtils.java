@@ -1,5 +1,6 @@
 package com.wolder.lock;
 
+import com.wolder.config.MessageReceiver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RedisLockUtils {
     private final StringRedisTemplate stringRedisTemplate;
+    private final MessageReceiver messageReceiver;
 
     /**
      * 创建一把redis_lock
@@ -23,6 +25,6 @@ public class RedisLockUtils {
      * @return
      */
     public RLock createLock(String name){
-        return new RedisLock(name,stringRedisTemplate);
+        return new RedisLock(name,stringRedisTemplate,messageReceiver);
     }
 }

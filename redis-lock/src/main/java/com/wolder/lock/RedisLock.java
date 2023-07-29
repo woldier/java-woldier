@@ -1,6 +1,7 @@
 package com.wolder.lock;
 
 import cn.hutool.core.thread.AsyncUtil;
+import com.wolder.config.MessageReceiver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -24,7 +25,7 @@ public class RedisLock extends AbstractRedisLock {
 
     /**
      * 尝试获取锁方法
-     * */
+     */
     private final static RedisScript<Long> TRY_LOCK = RedisScript.of("if (redis.call('EXISTS',KEYS[1])==0) then  " +
             "    redis.call('HSET',KEYS[1],ARGV[2],1); " +
             "    redis.call('PEXPIRE',KEYS[1],ARGV[1]); " +
@@ -51,21 +52,23 @@ public class RedisLock extends AbstractRedisLock {
                     "return 0; " +  //没有删除锁返回0
                     "else " +
                     "redis.call('del', KEYS[1]); " +  //删除key
-                   // "redis.call(SPUBLISH, KEYS[2], ARGV[1]); " + //发布订阅
+                    "redis.call('PUBLISH', KEYS[2], ARGV[1]); " + //发布订阅
                     "return 1; " +  //删除了锁返回1
                     "end; " +
                     "return nil;", Long.class);
+
     /**
      * description 构造函数
      *
      * @param name                锁的业务名称
      * @param stringRedisTemplate redis 连接
+     * @param messageReceiver 消息监听器
      * @return
      * @author: woldier
      * @date: 2023/7/29 上午8:03
      */
-    public RedisLock(String name, StringRedisTemplate stringRedisTemplate) {
-        super(Thread.currentThread().getId(), name, stringRedisTemplate);
+    public RedisLock(String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver) {
+        super(Thread.currentThread().getId(), name, stringRedisTemplate,messageReceiver);
     }
 
     /**
@@ -99,10 +102,19 @@ public class RedisLock extends AbstractRedisLock {
         }
         //能够执行到这里说明第一次加锁不成功
         //订阅消息
-        log.info(getHashKeyName()+" 首次尝试获取锁失败");
-        while (true){
-            //监听到订阅消息,或者是睡眠时间到了
-            CompletableFuture.anyOf();
+        log.info(getHashKeyName() + " 首次尝试获取锁失败");
+
+        while (true) {
+            //再次尝试获取锁
+            ttl = tryAc(-1, null); //传入过i时间为-1,时间单位为null
+            if (ttl == null) { //如果返回值为null 说明加锁成功
+                break;
+            }
+            try {
+                getMessageReceiver().get(getName()).acquire(); //阻塞获取信号量
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
     }
@@ -116,9 +128,8 @@ public class RedisLock extends AbstractRedisLock {
         }
         ttlTask.thenApply(ttl -> { //异步请求redis 完成后 判断是否需要 启动看门狗
             if (ttl == null) { //获取锁成功
-                log.info(getHashKeyName()+" 获取锁成功");
+                log.info(getHashKeyName() + " 获取锁成功");
                 if (lessTime > 0) { //如果有手动设置过期时间,那么不启动看门狗
-
                 } else {
                     //启动看门狗
                     watchDogSchedule();
@@ -155,8 +166,6 @@ public class RedisLock extends AbstractRedisLock {
     public void unlock() {
         tryRelease(TRY_UNLOCK);
     }
-
-
 
 
 }
