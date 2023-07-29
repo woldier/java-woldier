@@ -188,7 +188,7 @@ public abstract class AbstractRedisLock implements RLock {
             //说明已经存在    这里还需要想明白一个问题 如果第二次重入 是在过期时间还有25s时重入的,那么 此时过期时间被刷新成30s ,然后5s后会进行看门狗刷新过期时间又变成了30s ,这会打破1/3时间刷新吗,当然是不会的,因为再下次调用也是10s后
             oldEntry.addThreadId(getThreadId());
         } else { //说明是第一次 需要开启看门狗
-            System.out.println(getHashKeyName()+" 开启看门狗");
+            log.info(getHashKeyName()+" 开启看门狗");
             entry.addThreadId(getThreadId());
             watchDog();
         }
@@ -201,15 +201,15 @@ public abstract class AbstractRedisLock implements RLock {
         if (entry == null) { //说明线程已经解锁
             return; //结束看门狗
         }
-        System.out.println(getHashKeyName()+ " 启动watch dog..............");
+        log.info(getHashKeyName()+ " 启动watch dog..............");
         hashedWheelTimer.newTimeout(
                 timeout -> { //定时器执行逻辑
                     ExpirationEntry ent = EXPIRATION_RENEWAL_MAP.get(getName()); //获取实体
                     if (ent == null) {
-                        System.out.println(getHashKeyName()+" entity不存在了,watch_dog推出");
+                        log.info(getHashKeyName()+" entity不存在了,watch_dog推出");
                         return;} //结束watch dog
                     if (ent.getFirstThreadId() == null) { //获取线程id 为null 说明已经解锁
-                        System.out.println(getHashKeyName()+ " 当前线程id为空,watchdog 推出" );
+                        log.info(getHashKeyName()+ " 当前线程id为空,watchdog 推出" );
                         return;
                     }
                     //做续期
@@ -262,18 +262,18 @@ public abstract class AbstractRedisLock implements RLock {
                             getHashKeyName() //ARGV[3]锁名称
                     )
             ).handle((res, e) -> {
-                System.out.println(getHashKeyName() +" 解锁"  );
+                log.info(getHashKeyName() +" 解锁"  );
                 if (e != null) {
                     log.error("解锁出现错误", e);
                 }
                 if (res == null) throw new IllegalMonitorStateException(getHashKeyName()+" 没有加锁,不能进行解锁" );
                 EXPIRATION_RENEWAL_MAP.get(getName()).removeThreadId(getThreadId()); //重入次数减一
                 if (res == 0L) {
-                    System.out.println(getHashKeyName()+" 重入次数减一");
+                    log.info(getHashKeyName()+" 重入次数减一");
 
                 } else {
                     //重入次数变为0,删除map来停止看门狗
-                    System.out.println(getHashKeyName()+" 重入次数为0,通知看门狗停止");
+                    log.info(getHashKeyName()+" 重入次数为0,通知看门狗停止");
                     //EXPIRATION_RENEWAL_MAP.remove(getName());
                 }
                 return res;

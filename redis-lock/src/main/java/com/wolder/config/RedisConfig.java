@@ -27,9 +27,8 @@ public class RedisConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
         MessageListenerAdapter adapter = new MessageListenerAdapter(messageReceiver,"onMessage");
-        container.addMessageListener(adapter, new PatternTopic("topic"));
+        container.addMessageListener(adapter, new PatternTopic("publish_channel_lock:"+"woldier"));
         return container;
-
     }
 
 }

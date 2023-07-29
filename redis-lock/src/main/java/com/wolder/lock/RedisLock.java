@@ -98,8 +98,12 @@ public class RedisLock extends AbstractRedisLock {
             return;
         }
         //能够执行到这里说明第一次加锁不成功
-        System.out.println(getHashKeyName()+" 首次尝试获取锁失败");
-        throw new RuntimeException("加锁失败");
+        //订阅消息
+        log.info(getHashKeyName()+" 首次尝试获取锁失败");
+        while (true){
+            //监听到订阅消息,或者是睡眠时间到了
+            CompletableFuture.anyOf();
+        }
 
     }
 
@@ -112,7 +116,7 @@ public class RedisLock extends AbstractRedisLock {
         }
         ttlTask.thenApply(ttl -> { //异步请求redis 完成后 判断是否需要 启动看门狗
             if (ttl == null) { //获取锁成功
-                System.out.println(getHashKeyName()+" 获取锁成功");
+                log.info(getHashKeyName()+" 获取锁成功");
                 if (lessTime > 0) { //如果有手动设置过期时间,那么不启动看门狗
 
                 } else {
