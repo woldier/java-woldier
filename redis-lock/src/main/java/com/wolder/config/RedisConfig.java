@@ -17,17 +17,17 @@ import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 */
 @Configuration
 public class RedisConfig {
-//    @Bean
-//    public MessageListenerAdapter listenerAdapter(MessageReceiver messageReceiver){
-//        MessageListenerAdapter adapter = new MessageListenerAdapter(messageReceiver,"onMessage");
-//        return adapter;
-//    }
+
     @Bean
-    public RedisMessageListenerContainer listenerContainer(RedisConnectionFactory factory,MessageReceiver messageReceiver){
+    public MessageListenerAdapter listenerAdapter(MessageReceiver messageReceiver){
+        MessageListenerAdapter adapter = new MessageListenerAdapter(messageReceiver,"onMessage");
+        return adapter;
+    }
+    @Bean
+    public RedisMessageListenerContainer listenerContainer(RedisConnectionFactory factory,MessageListenerAdapter adapter){
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
-        MessageListenerAdapter adapter = new MessageListenerAdapter(messageReceiver,"onMessage");
-        container.addMessageListener(adapter, new PatternTopic("publish_channel_lock:"+"woldier"));
+        container.addMessageListener(adapter, new PatternTopic("publish_channel_lock"));
         return container;
     }
 
