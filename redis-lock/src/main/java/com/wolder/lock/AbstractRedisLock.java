@@ -219,28 +219,31 @@ public abstract class AbstractRedisLock implements RLock {
                         log.info(getHashKeyName() + " 当前线程id为空,watchdog退出");
                         return;
                     }
-                    if(!id.equals(getThreadId())){
-                        log.info(getHashKeyName() + " 当前watchdog过期");
-                        return;
-                    }
-                    log.info(getHashKeyName() + " 启动watch dog..............");
+//                    if(!id.equals(getThreadId())){
+//                        log.info(getHashKeyName() + " 当前watchdog过期");
+//                        return;
+//                    }
+                    log.info(getHashKeyName(id) + " 启动watch dog..............");
                     //做续期
                     CompletableFuture<Long> rewNewTask = supplyAsync(
                             () -> getStringRedisTemplate().execute(
                                     RENEW_EXPIRE,
                                     Collections.singletonList(getName()),
                                     String.valueOf(DEFAULT_LESS_TIME),
-                                    getHashKeyName()));
+                                    getHashKeyName(id)));
                     rewNewTask.whenComplete((status, e) -> { //完成后判断状态字
                         if (e != null) {
                             //说明报错了
                             EXPIRATION_RENEWAL_MAP.remove(getName());
-                            log.error(getHashKeyName() + " 执行renew操作的时候报错了", e);
+                            log.error(getHashKeyName(id) + " 执行renew操作的时候报错了", e);
                         }
                         if (status == 0) {//退出
+                            log.info(getHashKeyName(id)+" 返回0说明当前冲入次数为0了");
+                            watchDog();
                             return;
                             //cancelReNew(null);
                         } else {
+                            log.info(getHashKeyName(id)+ " 执行完续期任务递归调用");
                             watchDog(); //重新调用
                         }
 
@@ -265,7 +268,7 @@ public abstract class AbstractRedisLock implements RLock {
         if (threadId != null) { //重入锁退出情况
             entry.removeThreadId(threadId);
         }
-        if (threadId == null || entry.hasNoThreads()) { //如果是threadId传入null,或者是当前entity重入次数已经是0了 那么就从map中remove
+        if (threadId == null && entry.hasNoThreads()) { //如果是threadId传入null,并且是当前entity重入次数已经是0了 那么就从map中remove
             EXPIRATION_RENEWAL_MAP.remove(getName());
         }
     }
