@@ -7,26 +7,24 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.concurrent.TimeUnit;
+
 @SpringBootTest(classes = {Main.class})
 public class Test4Fair {
     @Autowired
     RedisLockUtils redisLockUtils;
     @Test
-    public void test(){
+    public void test() throws InterruptedException {
 
-        RLock lock = redisLockUtils.createFairLock("woldier");
+        new Thread(()->{
+            RLock lock = redisLockUtils.createFairLock("woldier-fair");
             lock.lock();
-//            try {
-//                method(); //重入
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            try {
-//                TimeUnit.SECONDS.sleep(25);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            lock.unlock();
-//            Thread.sleep(55_000L);
+        }).start();
+        new Thread(()->{
+            RLock lock = redisLockUtils.createFairLock("woldier-fair");
+            lock.lock();
+        }).start();
+
+        TimeUnit.SECONDS.sleep(40);
     }
 }

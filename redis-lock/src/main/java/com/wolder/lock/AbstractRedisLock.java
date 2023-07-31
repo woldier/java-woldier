@@ -192,7 +192,7 @@ public abstract class AbstractRedisLock implements RLock {
             log.info(getHashKeyName() + " ExpirationEntry已经存在,不需要再新建");
             oldEntry.addThreadId(getThreadId());
         } else { //说明是第一次 需要开启看门狗
-            log.info(getHashKeyName() + " ExpirationEntry不存在,需要再新建");
+            log.info(getHashKeyName() + " ExpirationEntry不存在,需要新建");
             entry.addThreadId(getThreadId());
             watchDog();
         }

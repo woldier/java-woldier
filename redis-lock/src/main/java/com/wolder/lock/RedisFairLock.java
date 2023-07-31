@@ -22,78 +22,77 @@ import java.util.concurrent.TimeUnit;
 public class RedisFairLock extends AbstractRedisLock {
     private final long threadWaitTime;
     private final static RedisScript<Long> TRY_LOCK = RedisScript.of(
-            //"-- 删除超过等待时间的key\n" +
-            "                    while true do \n" +
-                    "                        local firstThreadId2 = redis.call('lindex', KEYS[2], 0);  --获取queue中头节点其值为 UUID:threadId\n" +
-                    "                        if firstThreadId2 == false then --如果为null 说明当前没有等待加锁线程,直接跳出循环\n" +
-                    "                            break;\n" +
-                    "                        end;\n" +
-                    "-- 获取timeout zset集合中对应元素的值(过期时间)\n" +
-                    "                        local timeout = tonumber(redis.call('zscore', KEYS[3], firstThreadId2));  \n" +
-                    "    -- 如果timeout时间小于当前时间(ARGV[4) 那么就将对应的线程 UUID:threadId 从队列和过期时间zset中移除\n" +
-                    "                        if timeout <= tonumber(ARGV[4]) then\n" +
-                    "                            -- remove the item from the queue and timeout set\n" +
-                    "                            -- NOTE we do not alter any other timeout\n" +
-                    "                            redis.call('zrem', KEYS[3], firstThreadId2);\n" +
-                    "                            redis.call('lpop', KEYS[2]);\n" +
-                    "                        else \n" +
-                    "                            break;\n" +
-                    "                        end;\n" +
-                    "                    end;\n" +
-                    "                    -- check if the lock can be acquired now\t\n" +
-                    "                    if (redis.call('exists', KEYS[1]) == 0) -- 是否存在对应的业务key\n" +
-                    "                        and ((redis.call('exists', KEYS[2]) == 0) -- 当前业务key的等待队列不存在\n" +
-                    "                            or (redis.call('lindex', KEYS[2], 0) == ARGV[2])) then  -- 当前业务key等待队列的队头元素是要加锁的线程表示\n" +
-                    "                       -- remove this thread from the queue and timeout set\n" +
-                    "                       redis.call('lpop', KEYS[2]); -- 从队列中移除到当前队头元素\n" +
-                    "                       redis.call('zrem', KEYS[3], ARGV[2]); -- 从超时时间zset中移除对应的线程\n" +
+            // remove stale threads
+            "while true do " +
+                    "local firstThreadId2 = redis.call('lindex', KEYS[2], 0);" + //获取队头元素的线程标识 UUID:threadId
+                    "if firstThreadId2 == false then " + // 如果队头元素为false 那么说明队列为空 跳出循环
+                        "break;" +
+                    "end;" +
 
-                    "                        -- decrease timeouts for all waiting in the queue\n" +
-                    "                        local keys = redis.call('zrange', KEYS[3], 0, -1); -- 就获取zset集合中的所有元素，赋值给keys\n" +
-                    //      -- 而zscore的设置是: 上一个锁的score+waitTime+currentTime\n
-                    "     -- 让整个set集合中的元素都减掉waitTime \n" +
-                    "                        for i = 1, #keys, 1 do  -- 有点不知道在干嘛\n" +
-                    "                            redis.call('zincrby', KEYS[3], -tonumber(ARGV[3]), keys[i]);\n" +
-                    "                        end;\n" +
+                    "local timeout = tonumber(redis.call('zscore', KEYS[3], firstThreadId2));" + //从zset中拿到超时时间
+                    "if timeout <= tonumber(ARGV[4]) then " + //如果超时时间小于当前时间 那么就将其删除
+                    // remove the item from the queue and timeout set
+                    // NOTE we do not alter any other timeout
+                        "redis.call('zrem', KEYS[3], firstThreadId2);" + //从zset中删除
+                        "redis.call('lpop', KEYS[2]);" + //从queue中删除
+                    "else " +
+                        "break;" + //当前队头元素没有过期 那么就停止循环
+                    "end;" +
+            "end;" +
 
-                    "                        -- acquire the lock and set the TTL for the lease\n" +
-                    "                        redis.call('hset', KEYS[1], ARGV[2], 1);  --上锁\n" +
-                    "                        redis.call('pexpire', KEYS[1], ARGV[1]);  --刷新过期时间\n" +
-                    "                        return nil;\n" +
-                    "                    end;\n" +
-                    "\n" +
-                    "                    -- check if the lock is already held, and this is a re-entry\n" +
-                    "                    if redis.call('hexists', KEYS[1], ARGV[2]) == 1 then  -- 判断是重入\n" +
-                    "                        redis.call('hincrby', KEYS[1], ARGV[2],1);\n" +
-                    "                        redis.call('pexpire', KEYS[1], ARGV[1]);\n" +
-                    "                        return nil;\n" +
-                    "                    end;\n" +
-                    "\n" +
-                    "                    -- the lock cannot be acquired\n" +
-                    "                    -- check if the thread is already in the queue\n" +
-                    "                    local timeout = redis.call('zscore', KEYS[3], ARGV[2]); -- 加锁失败 查看是否已经在队列中\n" +
-                    "                    if timeout ~= false then\n" +
-                    "                        -- the real timeout is the timeout of the prior thread\n" +
-                    "                        -- in the queue, but this is approximately correct, and\n" +
-                    "                        -- avoids having to traverse the queue\n" +
-                    "                        return timeout - tonumber(ARGV[3]) - tonumber(ARGV[4]);\n" +
-                    "                    end;\n" +
-                    "\n" +
-                    "                    -- add the thread to the queue at the end, and set its timeout in the timeout set to the timeout of\n" +
-                    "                    -- the prior thread in the queue (or the timeout of the lock if the queue is empty) plus the\n" +
-                    "                    -- threadWaitTime\n" +
-                    "                    local lastThreadId = redis.call('lindex', KEYS[2], -1);\n" +
-                    "                    local ttl;\n" +
-                    "                    if lastThreadId ~= false and lastThreadId ~= ARGV[2] then\n" +
-                    "                        ttl = tonumber(redis.call('zscore', KEYS[3], lastThreadId)) - tonumber(ARGV[4]);\" +\n" +
-                    "                    else \n" +
-                    "                        ttl = redis.call('pttl', KEYS[1]);\n" +
-                    "                    end;\n" +
-                    "                    local timeout = ttl + tonumber(ARGV[3]) + tonumber(ARGV[4]);\n" +
-                    "                    if redis.call('zadd', KEYS[3], timeout, ARGV[2]) == 1 then\n" +
-                    "                        redis.call('rpush', KEYS[2], ARGV[2]); \n" +
-                    "                    end;\n" +
-                    "                    return ttl;"
+            // check if the lock can be acquired now
+            "if (redis.call('exists', KEYS[1]) == 0) " + //如果当前业务key不存在 并且 (队列中没有元素 或者 队列头部的元素与当前请求加锁的线程表示一致)
+            "and ((redis.call('exists', KEYS[2]) == 0) " +
+            "or (redis.call('lindex', KEYS[2], 0) == ARGV[2])) then " +
+
+            // remove this thread from the queue and timeout set
+                "redis.call('lpop', KEYS[2]);" + //
+                "redis.call('zrem', KEYS[3], ARGV[2]);" +
+
+            // decrease timeouts for all waiting in the queue
+                "local keys = redis.call('zrange', KEYS[3], 0, -1);" +
+                "for i = 1, #keys, 1 do " +
+                    "redis.call('zincrby', KEYS[3], -tonumber(ARGV[3]), keys[i]);" +
+                "end;" +
+
+                // acquire the lock and set the TTL for the lease
+                "redis.call('hset', KEYS[1], ARGV[2], 1);" +
+                "redis.call('pexpire', KEYS[1], ARGV[1]);" +
+                "return nil;" +
+            "end;" +
+
+            // check if the lock is already held, and this is a re-entry
+            "if redis.call('hexists', KEYS[1], ARGV[2]) == 1 then " +  //锁重入情况
+                "redis.call('hincrby', KEYS[1], ARGV[2],1);" +
+                "redis.call('pexpire', KEYS[1], ARGV[1]);" +
+                "return nil;" +
+            "end;" +
+
+            // the lock cannot be acquired
+            // check if the thread is already in the queue
+            "local timeout = redis.call('zscore', KEYS[3], ARGV[2]);" +
+            "if timeout ~= false then " +
+                // the real timeout is the timeout of the prior thread
+                // in the queue, but this is approximately correct, and
+                // avoids having to traverse the queue
+                "return timeout - tonumber(ARGV[3]) - tonumber(ARGV[4]);" +
+            "end;" +
+
+                    // add the thread to the queue at the end, and set its timeout in the timeout set to the timeout of
+                    // the prior thread in the queue (or the timeout of the lock if the queue is empty) plus the
+                    // threadWaitTime
+                    "local lastThreadId = redis.call('lindex', KEYS[2], -1);" +
+                    "local ttl;" +
+                    "if lastThreadId ~= false and lastThreadId ~= ARGV[2] then " +
+                    "ttl = tonumber(redis.call('zscore', KEYS[3], lastThreadId)) - tonumber(ARGV[4]);" +
+                    "else " +
+                    "ttl = redis.call('pttl', KEYS[1]);" +
+                    "end;" +
+                    "local timeout = ttl + tonumber(ARGV[3]) + tonumber(ARGV[4]);" +
+                    "if redis.call('zadd', KEYS[3], timeout, ARGV[2]) == 1 then " +
+                    "redis.call('rpush', KEYS[2], ARGV[2]);" +
+                    "end;" +
+                    "return ttl;"
             , Long.class);
     /**
      *
@@ -101,11 +100,11 @@ public class RedisFairLock extends AbstractRedisLock {
     private final static String LOCK_QUEUE_NAME = "redis_lock_queue:";
     private final static String LOCK_TIMEOUT_NAME = "redis_lock_timeout:";
 
-    public RedisFairLock( String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver) {
-        this(name,stringRedisTemplate,messageReceiver,60000*5); //默认的等待时间
+    public RedisFairLock(String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver) {
+        this(name, stringRedisTemplate, messageReceiver, 300000L); //默认的等待时间 默认是300s即5分钟
     }
 
-    public RedisFairLock( String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver,long threadWaitTime) {
+    public RedisFairLock(String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver, long threadWaitTime) {
         super(Thread.currentThread().getId(), name, stringRedisTemplate, messageReceiver);
         this.threadWaitTime = threadWaitTime;
     }
@@ -145,8 +144,12 @@ public class RedisFairLock extends AbstractRedisLock {
         //1.2.2 锁重试
         //1.2.3 成功则设置看门狗,失败继续重试
         Long ttl = tryAc(-1, null); //传入过i时间为-1,时间单位为null
-
-
+        if (ttl == null) { //如果返回值为null 说明加锁成功
+            return;
+        }
+        //能够执行到这里说明第一次加锁不成功
+        //订阅消息
+        log.info(getHashKeyName() + " 首次尝试获取锁失败");
 
     }
 
@@ -181,12 +184,11 @@ public class RedisFairLock extends AbstractRedisLock {
         long wait = threadWaitTime;
         long currentTime = System.currentTimeMillis();
         return getStringRedisTemplate().execute(redisScript,
-                Arrays.asList(getName(), getQueueName(),getTimeoutSetName()),
+                Arrays.asList(getName(), getQueueName(), getTimeoutSetName()),
                 String.valueOf(lessTime), //过期时间
                 hashKeyName, // UUID:threadId
-                String.valueOf(currentTime), //current time
-                String.valueOf(wait)  //wait time
-
+                String.valueOf(wait),//wait time
+                String.valueOf(currentTime) //current time
         );
     }
 

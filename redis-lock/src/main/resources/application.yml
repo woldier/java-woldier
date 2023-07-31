@@ -9,7 +9,8 @@ spring:
   application:
     #应用名称  向注册中心注册后的名称  非常重要  其他服务可以通过服务名称来调用该服务
     name: page-advice
-
+  redis:
+    host: 10.11.12.1
 #mybatis配置
 mybatis-plus:
   #mybatis  mapper文件位置配置
