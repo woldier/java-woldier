@@ -5,6 +5,7 @@ import com.wolder.config.MessageReceiver;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
+import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.RedissonBaseLock;
@@ -62,12 +63,13 @@ public abstract class AbstractRedisLock implements RLock {
      * @author: woldier
      * @date: 2023/7/29 上午10:25
      */
+    @Data
     public static class ExpirationEntry {
         /*
          *
          * */
         private final Map<Long, Integer> threadIds = new LinkedHashMap<>();  //保存线程id
-
+        private  Timeout timerTask;
         public ExpirationEntry() {
             super();
         }
@@ -168,6 +170,10 @@ public abstract class AbstractRedisLock implements RLock {
         return CompletableFuture.supplyAsync(supplier);
     }
 
+    protected CompletableFuture<Void>  runAsync(Runnable task   ){
+       return  CompletableFuture.runAsync(task);
+    }
+
     /**
      * description 获取异步线程的执行返回
      *
@@ -190,14 +196,20 @@ public abstract class AbstractRedisLock implements RLock {
          if (oldEntry != null) {
             //说明已经存在    这里还需要想明白一个问题 如果第二次重入 是在过期时间还有25s时重入的,那么 此时过期时间被刷新成30s ,然后5s后会进行看门狗刷新过期时间又变成了30s ,这会打破1/3时间刷新吗,当然是不会的,因为再下次调用也是10s后
             log.info(getHashKeyName() + " ExpirationEntry已经存在,不需要再新建");
-            oldEntry.addThreadId(getThreadId());
+             if(oldEntry.hasNoThreads()){
+                 log.info(getHashKeyName() + " 当前entity中的线程id没有了,停止之前的watchdog,重启一个新的");
+                 oldEntry.getTimerTask().cancel();
+                 oldEntry.addThreadId(getThreadId());
+                 watchDog();
+             }
+             else {
+                 oldEntry.addThreadId(getThreadId());
+             }
         } else { //说明是第一次 需要开启看门狗
             log.info(getHashKeyName() + " ExpirationEntry不存在,需要新建");
             entry.addThreadId(getThreadId());
             watchDog();
         }
-
-
     }
 
     private void watchDog() {
@@ -206,7 +218,7 @@ public abstract class AbstractRedisLock implements RLock {
             log.info(" entry为空,watchdog 结束");
             return; //结束看门狗
         }
-        hashedWheelTimer.newTimeout(
+        Timeout timeOut = hashedWheelTimer.newTimeout(
 
                 timeout -> { //定时器执行逻辑
                     ExpirationEntry ent = EXPIRATION_RENEWAL_MAP.get(getName()); //获取实体
@@ -238,12 +250,12 @@ public abstract class AbstractRedisLock implements RLock {
                             log.error(getHashKeyName(id) + " 执行renew操作的时候报错了", e);
                         }
                         if (status == 0) {//退出
-                            log.info(getHashKeyName(id)+" 返回0说明当前续期失败");
-//                          watchDog();
+                            log.info(getHashKeyName(id) + " 返回0说明当前续期失败");
+                            watchDog();
                             return;
                             //cancelReNew(null);
                         } else {
-                            log.info(getHashKeyName(id)+ " 执行完续期任务递归调用");
+                            log.info(getHashKeyName(id) + " 执行完续期任务递归调用");
                             watchDog(); //重新调用
                         }
 
@@ -251,7 +263,7 @@ public abstract class AbstractRedisLock implements RLock {
                 }, DEFAULT_LESS_TIME / 3, DEFAULT_TIME_UNIT
         );
 
-
+        entry.setTimerTask(timeOut);
     }
 
     /**
@@ -262,7 +274,7 @@ public abstract class AbstractRedisLock implements RLock {
      * @author: woldier
      * @date: 下午12:56
      */
-    private void cancelReNew(Long threadId) {
+    protected void cancelReNew(Long threadId) {
         ExpirationEntry entry = EXPIRATION_RENEWAL_MAP.get(getName());
         if (entry == null) return;
         if (threadId != null) { //重入锁退出情况
@@ -273,34 +285,6 @@ public abstract class AbstractRedisLock implements RLock {
         }
     }
 
-    protected void tryRelease(RedisScript<Long> redisScript) {
-        try {
-            supplyAsync(() ->
-                    getStringRedisTemplate().execute(redisScript,
-                            Arrays.asList(getName(), "publish_channel_lock"),
-                            getName(),//ARGV[1]发布的消息内容
-                            String.valueOf(DEFAULT_LESS_TIME),//过期时间
-                            getHashKeyName() //ARGV[3]锁名称
-                    )
-            ).handle((res, e) -> {
-                log.info(getHashKeyName() + " 解锁");
-                if (e != null) {
-                    log.error("解锁出现错误", e);
-                }
-                if (res == null) throw new IllegalMonitorStateException(getHashKeyName() + " 没有加锁,不能进行解锁");
-                cancelReNew(getThreadId()); //重入次数减一
-                if (res == 0L) {
-                    log.info(getHashKeyName() + " 重入次数减一");
-                } else {
-                    //重入次数变为0,删除map来停止看门狗
-                    log.info(getHashKeyName() + " 重入次数为0,通知看门狗停止");
-//                    EXPIRATION_RENEWAL_MAP.remove(getName());
-//                    getStringRedisTemplate().execute(RedisScript.of("redis.call('PUBLISH',KEYS[1],ARGV[1])"),Collections.singletonList("publish_channel_lock"),getName());
-                }
-                return res;
-            }).get();
-        } catch (InterruptedException | ExecutionException | IllegalMonitorStateException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    protected abstract void  tryRelease (RedisScript<Long> redisScript);
+
 }

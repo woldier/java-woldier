@@ -62,13 +62,13 @@ public class RedisLock extends AbstractRedisLock {
      *
      * @param name                锁的业务名称
      * @param stringRedisTemplate redis 连接
-     * @param messageReceiver 消息监听器
+     * @param messageReceiver     消息监听器
      * @return
      * @author: woldier
      * @date: 2023/7/29 上午8:03
      */
     public RedisLock(String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver) {
-        super(Thread.currentThread().getId(), name, stringRedisTemplate,messageReceiver);
+        super(Thread.currentThread().getId(), name, stringRedisTemplate, messageReceiver);
     }
 
     /**
@@ -87,7 +87,7 @@ public class RedisLock extends AbstractRedisLock {
      * {@code Lock} implementation.
      */
     @Override
-    public void lock() {
+    public void lock()  {
         //设置redi
         //1.1 成功
         // 1.1.1 设置看门狗
@@ -109,8 +109,24 @@ public class RedisLock extends AbstractRedisLock {
             if (ttl == null) { //如果返回值为null 说明加锁成功
                 break;
             }
+            long t = ttl;
+            //两个任务任意一个完成 进入下一次循环
+//            AsyncUtil.waitAny(runAsync(() -> {
+//                        try {
+//                            getMessageReceiver().get(getName()).acquire();
+//                        } catch (InterruptedException e) {
+//                            throw new RuntimeException(e);
+//                        }
+//                    }),
+//                    runAsync(() -> {
+//                        try {
+//                            TimeUnit.MILLISECONDS.sleep(t);
+//                        } catch (InterruptedException e) {
+//                            throw new RuntimeException(e);
+//                        }
+//                    }));
             try {
-                getMessageReceiver().get(getName()).acquire(); //阻塞获取信号量
+                getMessageReceiver().get(getName()).acquire();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -166,5 +182,35 @@ public class RedisLock extends AbstractRedisLock {
         tryRelease(TRY_UNLOCK);
     }
 
-
+    @Override
+    protected void tryRelease(RedisScript<Long> redisScript) {
+        try {
+            supplyAsync(() ->
+                    getStringRedisTemplate().execute(redisScript,
+                            Arrays.asList(getName(), "publish_channel_lock"),
+                            getName(),//ARGV[1]发布的消息内容
+                            String.valueOf(DEFAULT_LESS_TIME),//过期时间
+                            getHashKeyName() //ARGV[3]锁名称
+                    )
+            ).handle((res, e) -> {
+                log.info(getHashKeyName() + " 解锁");
+                if (e != null) {
+                    log.error("解锁出现错误", e);
+                }
+                if (res == null) throw new IllegalMonitorStateException(getHashKeyName() + " 没有加锁,不能进行解锁");
+                cancelReNew(getThreadId()); //重入次数减一
+                if (res == 0L) {
+                    log.info(getHashKeyName() + " 重入次数减一");
+                } else {
+                    //重入次数变为0,删除map来停止看门狗
+                    log.info(getHashKeyName() + " 重入次数为0");
+//                    EXPIRATION_RENEWAL_MAP.remove(getName());
+//                    getStringRedisTemplate().execute(RedisScript.of("redis.call('PUBLISH',KEYS[1],ARGV[1])"),Collections.singletonList("publish_channel_lock"),getName());
+                }
+                return res;
+            }).get();
+        } catch (InterruptedException | ExecutionException | IllegalMonitorStateException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
