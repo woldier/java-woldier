@@ -70,7 +70,7 @@ public class RedisFairLock extends AbstractRedisLock {
 
             // the lock cannot be acquired
             // check if the thread is already in the queue
-            "local timeout = redis.call('zscore', KEYS[3], ARGV[2]);" +
+            "local timeout = redis.call('zscore', KEYS[3], ARGV[2]);" + // 获取 当前线程的过期时间
             "if timeout ~= false then " +
                 // the real timeout is the timeout of the prior thread
                 // in the queue, but this is approximately correct, and
