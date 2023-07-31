@@ -29,20 +29,20 @@ public abstract class AbstractRedisLock implements RLock {
 
     protected final Long threadId; //线程id
     protected final String name;  //业务名称
-    protected final StringRedisTemplate stringRedisTemplate;
-    protected final MessageReceiver messageReceiver;
+    protected final StringRedisTemplate stringRedisTemplate;  //redis请求
+    protected final MessageReceiver messageReceiver;  //订阅消息监听器
 
 
-    protected final static Long DEFAULT_LESS_TIME = 30_000L;
-    protected final static TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
+    protected final static Long DEFAULT_LESS_TIME = 30_000L; //默认过期时间
+    protected final static TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;  //默认过期时间的单位
     /**
      * 存放续期任务的map
      * key是业务字段
      * 存储的对象中包含了当前线程id
      */
-    private static final ConcurrentMap<String, ExpirationEntry> EXPIRATION_RENEWAL_MAP = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, ExpirationEntry> EXPIRATION_RENEWAL_MAP = new ConcurrentHashMap<>();  //用于保存本地中获取了业务锁的实体类
 
-    private final HashedWheelTimer hashedWheelTimer = new HashedWheelTimer();
+    private final HashedWheelTimer hashedWheelTimer = new HashedWheelTimer();  //定时任务
 
     /*
      * 尝试获取锁方法
@@ -127,7 +127,7 @@ public abstract class AbstractRedisLock implements RLock {
     public AbstractRedisLock(Long threadId, String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver) {
 
         this.threadId = threadId;
-        if (name.startsWith("lick:"))
+        if (name.startsWith("lick:"))  //给业务锁都
             this.name = name;
         else
             this.name = "lock:" + name;
@@ -187,7 +187,7 @@ public abstract class AbstractRedisLock implements RLock {
     protected void watchDogSchedule() {
         ExpirationEntry entry = new ExpirationEntry(); //创建一个entity
         ExpirationEntry oldEntry = EXPIRATION_RENEWAL_MAP.putIfAbsent(getName(), entry); //如果不存在才会进行put操作
-        if (oldEntry != null) {
+         if (oldEntry != null) {
             //说明已经存在    这里还需要想明白一个问题 如果第二次重入 是在过期时间还有25s时重入的,那么 此时过期时间被刷新成30s ,然后5s后会进行看门狗刷新过期时间又变成了30s ,这会打破1/3时间刷新吗,当然是不会的,因为再下次调用也是10s后
             log.info(getHashKeyName() + " ExpirationEntry已经存在,不需要再新建");
             oldEntry.addThreadId(getThreadId());
@@ -238,8 +238,8 @@ public abstract class AbstractRedisLock implements RLock {
                             log.error(getHashKeyName(id) + " 执行renew操作的时候报错了", e);
                         }
                         if (status == 0) {//退出
-                            log.info(getHashKeyName(id)+" 返回0说明当前冲入次数为0了");
-                            watchDog();
+                            log.info(getHashKeyName(id)+" 返回0说明当前续期失败");
+//                          watchDog();
                             return;
                             //cancelReNew(null);
                         } else {

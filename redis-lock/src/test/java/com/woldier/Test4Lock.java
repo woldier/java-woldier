@@ -98,7 +98,7 @@ public class Test4Lock {
 
         thread2.join();
         thread1.join();
-
+        TimeUnit.SECONDS.sleep(15);
 //        RLock lock = redisLockUtils.createLock("woldier");
 //            lock.lock();
 //            try {

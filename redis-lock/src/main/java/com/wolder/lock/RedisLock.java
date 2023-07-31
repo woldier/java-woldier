@@ -88,8 +88,7 @@ public class RedisLock extends AbstractRedisLock {
      */
     @Override
     public void lock() {
-        //设置redis
-
+        //设置redi
         //1.1 成功
         // 1.1.1 设置看门狗
         //1.2 失败
