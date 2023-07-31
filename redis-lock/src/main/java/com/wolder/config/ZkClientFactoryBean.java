@@ -16,7 +16,7 @@ import javax.annotation.PostConstruct;
 * @author: woldier
 * @date: 2023/7/27 上午6:34
 */
-@Component
+//@Component
 public class ZkClientFactoryBean implements FactoryBean
         <CuratorFramework> {
     @Value("${zookeeper.connectString:localhost:2181}")

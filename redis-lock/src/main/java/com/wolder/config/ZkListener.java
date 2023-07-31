@@ -16,7 +16,7 @@ import java.util.Optional;
 * @author: woldier
 * @date: 2023/7/27 上午6:45
 */
-@Component
+//@Component
 public class ZkListener {
     @Resource
     private CuratorFramework curatorClient;

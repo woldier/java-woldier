@@ -1,27 +1,29 @@
 package com.wolder.lock;
 
 import com.wolder.config.MessageReceiver;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
-*
-* description TODO
-*        
-* @author: woldier 
-* @date: 2023/7/31 上午10:34
-*/
+ * description TODO
+ *
+ * @author: woldier
+ * @date: 2023/7/31 上午10:34
+ */
 @Slf4j
+@Data
 public class RedisFairLock extends AbstractRedisLock {
-
+    private final long threadWaitTime;
     private final static RedisScript<Long> TRY_LOCK = RedisScript.of(
             //"-- 删除超过等待时间的key\n" +
-                    "                    while true do \n" +
+            "                    while true do \n" +
                     "                        local firstThreadId2 = redis.call('lindex', KEYS[2], 0);  --获取queue中头节点其值为 UUID:threadId\n" +
                     "                        if firstThreadId2 == false then --如果为null 说明当前没有等待加锁线程,直接跳出循环\n" +
                     "                            break;\n" +
@@ -92,23 +94,31 @@ public class RedisFairLock extends AbstractRedisLock {
                     "                        redis.call('rpush', KEYS[2], ARGV[2]); \n" +
                     "                    end;\n" +
                     "                    return ttl;"
-            ,Long.class);
+            , Long.class);
     /**
      *
      */
     private final static String LOCK_QUEUE_NAME = "redis_lock_queue:";
     private final static String LOCK_TIMEOUT_NAME = "redis_lock_timeout:";
 
-    public RedisFairLock(Long threadId, String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver) {
-        super(threadId, name, stringRedisTemplate, messageReceiver);
+    public RedisFairLock( String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver) {
+        this(name,stringRedisTemplate,messageReceiver,60000*5); //默认的等待时间
+    }
 
-    private String getQueueName(){
-        return LOCK_QUEUE_NAME+ getName();
+    public RedisFairLock( String name, StringRedisTemplate stringRedisTemplate, MessageReceiver messageReceiver,long threadWaitTime) {
+        super(Thread.currentThread().getId(), name, stringRedisTemplate, messageReceiver);
+        this.threadWaitTime = threadWaitTime;
     }
+
+    private String getQueueName() {
+        return LOCK_QUEUE_NAME + getName();
+    }
+
     private String getTimeoutSetName
-        (){
+            () {
+        return LOCK_TIMEOUT_NAME + getName();
     }
-    }
+
 
     /**
      * Acquires the lock.
@@ -135,6 +145,9 @@ public class RedisFairLock extends AbstractRedisLock {
         //1.2.2 锁重试
         //1.2.3 成功则设置看门狗,失败继续重试
         Long ttl = tryAc(-1, null); //传入过i时间为-1,时间单位为null
+
+
+
     }
 
     private Long tryAc(long lessTime, TimeUnit timeUnit) {
@@ -165,8 +178,18 @@ public class RedisFairLock extends AbstractRedisLock {
      * @date: 2023/7/29 上午8:35
      */
     private Long lockRequestInnerAsync(RedisScript<Long> redisScript, Long lessTime, String hashKeyName) {
-        return getStringRedisTemplate().execute(redisScript, Collections.singletonList(getName(),), String.valueOf(lessTime), hashKeyName);
+        long wait = threadWaitTime;
+        long currentTime = System.currentTimeMillis();
+        return getStringRedisTemplate().execute(redisScript,
+                Arrays.asList(getName(), getQueueName(),getTimeoutSetName()),
+                String.valueOf(lessTime), //过期时间
+                hashKeyName, // UUID:threadId
+                String.valueOf(currentTime), //current time
+                String.valueOf(wait)  //wait time
+
+        );
     }
+
     /**
      * Releases the lock.
      *

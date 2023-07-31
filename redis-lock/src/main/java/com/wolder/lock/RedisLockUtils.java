@@ -27,4 +27,17 @@ public class RedisLockUtils {
     public RLock createLock(String name){
         return new RedisLock(name,stringRedisTemplate,messageReceiver);
     }
+
+    /**
+    *
+    * description 创建一把公平锁
+    *
+    * @param name  业务key
+    * @return com.wolder.lock.RLock
+    * @author: woldier wong
+    * @date: 2023/7/31 16:09
+    */
+    public RLock createFairLock(String name) {
+        return new RedisFairLock(name,stringRedisTemplate,messageReceiver);
+    }
 }
