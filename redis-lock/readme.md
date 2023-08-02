@@ -158,7 +158,6 @@ WatchedEvent state:SyncConnected type:NodeDeleted path:/lock
 
 ```java
 
-
 ```
 
 # 2. Redission lock
@@ -233,7 +232,7 @@ public void timeout(CompletableFuture<?> promise) {
     }
 ```
 
-1500ms重试一次 ,重试3次后会进入锁碰撞
+1500ms重试一次 ,重试3次
 
 
 
@@ -241,7 +240,7 @@ public void timeout(CompletableFuture<?> promise) {
 
 redis属于AP锁,首先C是指一致性,A指的是高可用性,用于redis主从之间的同步存在一定的延迟,因此不能保证查询时不存在slave节点中的key一定不存在master节点中.redis牺牲了数据的一致性而允许redis在短时间内不同步因此属于是AP锁
 
-
+C , P  为什么 ,为什么不能共存. redis同步细节,zk同步细节
 
 4. TryLock和lock在redis中怎么实现的？ lua脚本怎么写？
 
@@ -338,6 +337,8 @@ redis实现的分布式锁不存在惊群效应,因为其在自旋获取锁的�
 
 非公平的,因为我们只是通过key-value去控制加锁是否成功而没有设置一个队列或者list来存储请求的先后顺序
 
+和公平的.
+
 9. Redis分布式锁，可重入吗？具体怎么实现的可重入锁？
 
 可以重入,分布式锁中保存的数据结构是hash结构,hashkey保存的是lock 的jvm+thread标识,而value则是保存的重入次数
@@ -348,8 +349,45 @@ redis实现的分布式锁不存在惊群效应,因为其在自旋获取锁的�
 
 
 
-```java
+公平锁自测
 
+jvm 2-3 , 两到三个线程启动 ,观察锁的获取情况.
+
+trylock , 
+
+可重入
+
+看门狗自测
+
+
+
+公平自测
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```java
  @Override
     public void lock() {
         try {
@@ -825,4 +863,216 @@ protected void cancelExpirationRenewal(Long threadId) {
 //        get(lockAsync(leaseTime, unit));
     }
 ```
+
+# 3.Redission fair lock
+
+```lua
+-- KEY[1] lockName
+-- KEY[2] threadsQueueName -> redisson_lock_queue:{lockName}
+-- KEY[3] timeoutSetName -> redisson_lock_timeout:{lockName}
+-- ARGV[1] unit.toMillis(leaseTime)
+-- ARGV[2] uuid:threadId 
+-- ARGV[3] waitTime
+-- ARGV[4] currentTime当前时间
+
+				-- 删除超过等待时间的key
+                    while true do 
+                        local firstThreadId2 = redis.call('lindex', KEYS[2], 0);  --获取queue中头节点其值为 UUID:threadId
+                        if firstThreadId2 == false then --如果为null 说明当前没有等待加锁线程,直接跳出循环
+                            break;
+                        end;
+						-- 获取timeout zset集合中对应元素的值(过期时间)
+                        local timeout = tonumber(redis.call('zscore', KEYS[3], firstThreadId2));  
+    					-- 如果timeout时间小于当前时间(ARGV[4) 那么就将对应的线程 UUID:threadId 从队列和过期时间zset中移除
+                        if timeout <= tonumber(ARGV[4]) then
+                            -- remove the item from the queue and timeout set
+                            -- NOTE we do not alter any other timeout
+                            redis.call('zrem', KEYS[3], firstThreadId2);
+                            redis.call('lpop', KEYS[2]);
+                        else 
+                            break;
+                        end;
+                    end;
+                    -- check if the lock can be acquired now	
+                    if (redis.call('exists', KEYS[1]) == 0) -- 是否存在对应的业务key
+                        and ((redis.call('exists', KEYS[2]) == 0) -- 当前业务key的等待队列不存在
+                            or (redis.call('lindex', KEYS[2], 0) == ARGV[2])) then  -- 当前业务key等待队列的队头元素是要加锁的线程表示
+						
+                       -- remove this thread from the queue and timeout set
+                       redis.call('lpop', KEYS[2]); -- 从队列中移除到当前队头元素
+                       redis.call('zrem', KEYS[3], ARGV[2]); -- 从超时时间zset中移除对应的线程
+
+                        -- decrease timeouts for all waiting in the queue
+                        local keys = redis.call('zrange', KEYS[3], 0, -1); -- 就获取zset集合中的所有元素，赋值给keys
+   						-- 而zscore的设置是: 上一个锁的score+waitTime+currentTime
+    					-- 让整个set集合中的元素都减掉waitTime 
+                        for i = 1, #keys, 1 do  -- 有点不知道在干嘛
+                            redis.call('zincrby', KEYS[3], -tonumber(ARGV[3]), keys[i]);
+                        end;
+
+                        -- acquire the lock and set the TTL for the lease
+                        redis.call('hset', KEYS[1], ARGV[2], 1);  --上锁
+                        redis.call('pexpire', KEYS[1], ARGV[1]);  --刷新过期时间
+                        return nil;
+                    end;
+
+                    -- check if the lock is already held, and this is a re-entry
+                    if redis.call('hexists', KEYS[1], ARGV[2]) == 1 then  -- 判断是重入
+                        redis.call('hincrby', KEYS[1], ARGV[2],1);
+                        redis.call('pexpire', KEYS[1], ARGV[1]);
+                        return nil;
+                    end;
+
+                    -- the lock cannot be acquired
+                    -- check if the thread is already in the queue
+                    local timeout = redis.call('zscore', KEYS[3], ARGV[2]); -- 加锁失败 查看是否已经在队列中
+                    if timeout ~= false then
+                        -- the real timeout is the timeout of the prior thread
+                        -- in the queue, but this is approximately correct, and
+                        -- avoids having to traverse the queue
+                        return timeout - tonumber(ARGV[3]) - tonumber(ARGV[4]);
+                    end;
+
+                    -- add the thread to the queue at the end, and set its timeout in the timeout set to the timeout of
+                    -- the prior thread in the queue (or the timeout of the lock if the queue is empty) plus the
+                    -- threadWaitTime
+                    local lastThreadId = redis.call('lindex', KEYS[2], -1);
+                    local ttl;
+                    if lastThreadId ~= false and lastThreadId ~= ARGV[2] then
+                        ttl = tonumber(redis.call('zscore', KEYS[3], lastThreadId)) - tonumber(ARGV[4]);" +
+                    else 
+                        ttl = redis.call('pttl', KEYS[1]);
+                    end;
+                    local timeout = ttl + tonumber(ARGV[3]) + tonumber(ARGV[4]);
+                    if redis.call('zadd', KEYS[3], timeout, ARGV[2]) == 1 then
+                        redis.call('rpush', KEYS[2], ARGV[2]); 
+                    end;
+                    return ttl;
+```
+
+
+
+
+
+# 4.JUC
+
+## 1. 深入理解synchronized 细节（锁膨胀过程，标识, ）
+
+
+
+## 2.Lock子类深入了解区别,以及源码实现.
+
+![image-20230802170701303](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230802170701303.png)
+
+
+
+
+
+- AOS(AbstractOwnableSynchronizer)抽象父类 ,定义了同步器,将锁与线程id进行绑定的成员便利与get与set的方法,需要注意的是,对于保存了owner thread引用的成员变量`exclusiveOwnerThread`,加了transient关键字,确保对象经过序列化与反序列化其对象引用都不会发生变化
+
+```java
+public abstract class AbstractOwnableSynchronizer
+    implements java.io.Serializable {
+
+    /** Use serial ID even though all fields transient. */
+    private static final long serialVersionUID = 3737899427754241961L;
+
+    /**
+     * Empty constructor for use by subclasses.
+     */
+    protected AbstractOwnableSynchronizer() { }
+
+    /**
+     * The current owner of exclusive mode synchronization.
+     */
+    private transient Thread exclusiveOwnerThread;
+    //................
+}
+```
+
+- AbstractQueuedSynchronizer(AQS) 抽象队列同步器
+
+AQS还有个兄弟AbstractQueuedLongSynchronizer(AQLS) 两兄弟所有操作都是一致的,唯一的不同是他们维护的状态字是int与lang的区别.
+
+通过阅读代码注释,有些比较关键的地方如下
+
+`This class supports either or both a default exclusive mode and a shared mode`
+
+AQS支持独占模式和享元模式.(默认是独占模式)
+
+AQS提供了两种工作模式：独占(exclusive)模式和共享(shared)模式。它的所有子类中，要么实现并使用了它独占功能的 API，要么使用了共享功能的API，而不会同时使用两套 API，即便是它最有名的子类 ReentrantReadWriteLock，也是通过两个内部类：读锁和写锁，分别实现的两套 API 来实现的。
+
+ 独占模式即当锁被某个线程成功获取时，其他线程无法获取到该锁，共享模式即当锁被某个线程成功获取时，其他线程仍然可能获取到该锁。
+reference: https://blog.csdn.net/weixin_43823391/article/details/114259447
+
+```java
+	This class does not "understand" these differences except in the mechanical sense that when a shared mode acquire succeeds, the next waiting thread (if one exists) must also determine whether it can acquire as well. Threads waiting in the different modes share the same FIFO queue. Usually, implementation subclasses support only one of these modes, but both can come into play for example in a ReadWriteLock. Subclasses that support only exclusive or only shared modes need not define the methods supporting the unused mode
+```
+
+
+
+```java
+	This class defines a nested AbstractQueuedSynchronizer.ConditionObject class that can be used as a Condition implementation by subclasses supporting exclusive mode for which method isHeldExclusively reports whether synchronization is exclusively held with respect to the current thread,method release invoked with the current getState value fully releases this object, and acquire, given this saved state value, eventually restores this object to its previous acquired state. .... 
+    The behavior of AbstractQueuedSynchronizer.ConditionObject depends <of course> on the semantics of its synchronizer implementation.
+    
+用ConditionObject来支持exclusive mode,并且通过isHeldExclusively方法report是否是独占性持有
+ConditionObject的行为取决于实现类的逻辑
+```
+
+
+
+```java
+Serialization of this class stores only the underlying atomic integer maintaining state, so deserialized objects have empty thread queues. Typical subclasses requiring serializability will define a readObject method that restores this to a known initial state upon deserialization
+    对这个类的序列化指挥保存state属性,
+```
+
+
+
+
+
+## 3.信号量
+
+
+
+## 4.深入了解 并知道使用场景,以及实现原理 :
+
+AQS(AbstractQueuedSynchronizer)\ReentrantLock\ReentrantReadWriteLock\CountDownLatch\Semphore\
+
+ 
+
+## 5.请解释一下Synchronized的锁粗化,什么场景使用到锁粗化? 怎么弄?
+
+
+
+## 6.描述一下Synchronized锁膨胀 每一步的具体细节? 锁膨胀以后,没有请求了,依然是重量级
+
+## 锁怎么办?
+
+
+
+## 7.Synchronized头信息存了什么,膨胀的每一步存储哪些东西,为什么要存这些?
+
+
+
+
+
+## 8.ReentrantLock中公平锁,非公平锁都实现了抽象类AbstractQueuedSynchronizer,  请问,AQS里面的原理是什么? 为什么要实现AQS?
+
+## 9.ReentrantLock和ReentrantReadWriteLock实现原理的区别是什么? 写操作多于读操作的时候,应该用哪个锁?
+
+
+
+##  10.ReentrantReadWriteLock什么情况下共享模式,什么情况下独占模式?请列举相关代码.
+
+
+
+## 11.AQS如何实现的FIFO? 请什么原理以及列举相关代码.
+
+
+
+## 12.Lock怎么实现的锁超时? 例如: tryLock(long ***\*timeout\****, TimeUnit unit)
+
+
+
+## 13CountDownLatch 如何实现计数器? 其中await是怎么实现的? await( long timeout,TimeUnit unit) 超时机制是怎么实现的?
 
