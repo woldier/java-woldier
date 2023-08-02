@@ -21,49 +21,39 @@ public class Test4Fair {
     @Test
     public void test() throws InterruptedException {
 
-        new Thread(()->{
-            RLock lock = redisLockUtils.createFairLock("woldier-fair");
-            lock.lock();
-            try {
-                method();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            lock.unlock();
-        }).start();
-        new Thread(()->{
-            RLock lock = redisLockUtils.createFairLock("woldier-fair");
-            lock.lock();
-            try {
-                method();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            lock.unlock();
+        Thread thread1 = getThread();
+        thread1.start();
+        TimeUnit.SECONDS.sleep(2);
 
-        }).start();
-        new Thread(()->{
-            RLock lock = redisLockUtils.createFairLock("woldier-fair");
-            lock.lock();
-            try {
-                method();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            lock.unlock();
-        }).start();
-        new Thread(()->{
-            RLock lock = redisLockUtils.createFairLock("woldier-fair");
-            lock.lock();
-            try {
-                method();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            lock.unlock();
-        }).start();
+        Thread thread2 = getThread();
+        thread2.start();
+        TimeUnit.SECONDS.sleep(2);
 
-        TimeUnit.SECONDS.sleep(100);
+        Thread thread3 = getThread();
+        thread3.start();
+        TimeUnit.SECONDS.sleep(2);
+
+        Thread thread4 = getThread();
+        thread4.start();
+
+        thread1.join();
+        thread2.join();
+        thread3.join();
+        thread4.join();
+
+    }
+
+    private Thread getThread() {
+        return new Thread(() -> {
+            RLock lock = redisLockUtils.createFairLock("woldier-fair");
+            lock.lock();
+            try {
+                method();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            lock.unlock();
+        });
     }
 
     public void method() throws InterruptedException {
