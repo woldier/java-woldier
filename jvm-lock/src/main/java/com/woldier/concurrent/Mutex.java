@@ -8,8 +8,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
-/***
- *
+/**
  * description metex 互斥信号
  *
  * @author: woldier wong
