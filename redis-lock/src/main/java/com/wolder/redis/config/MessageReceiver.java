@@ -1,4 +1,4 @@
-package com.wolder.config;
+package com.wolder.redis.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.listener.MessageListener;

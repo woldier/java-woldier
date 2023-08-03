@@ -1,15 +1,13 @@
 package com.woldier;
 
 import com.wolder.Main;
-import com.wolder.lock.RLock;
-import com.wolder.lock.RedisLockUtils;
+import com.wolder.redis.lock.RLock;
+import com.wolder.redis.lock.RedisLockUtils;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
 import org.junit.jupiter.api.Test;
-import org.redisson.Redisson;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;

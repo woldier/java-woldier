@@ -1,11 +1,10 @@
-package com.wolder.lock;
+package com.wolder.redis.lock;
 
-import com.wolder.config.MessageReceiver;
+import com.wolder.redis.config.MessageReceiver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
 /**
 *
 * description 工具类,用于创建redis lock

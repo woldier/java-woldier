@@ -1,14 +1,12 @@
-package com.wolder.lock;
+package com.wolder.redis.lock;
 
 import cn.hutool.core.thread.AsyncUtil;
-import com.wolder.config.MessageReceiver;
+import com.wolder.redis.config.MessageReceiver;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.RedissonBaseLock;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 

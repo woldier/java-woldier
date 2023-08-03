@@ -1,16 +1,13 @@
-package com.wolder.lock;
+package com.wolder.redis.lock;
 
-import cn.hutool.core.thread.AsyncUtil;
-import com.wolder.config.MessageReceiver;
+import com.wolder.redis.config.MessageReceiver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 

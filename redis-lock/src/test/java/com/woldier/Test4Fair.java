@@ -1,8 +1,8 @@
 package com.woldier;
 
 import com.wolder.Main;
-import com.wolder.lock.RLock;
-import com.wolder.lock.RedisLockUtils;
+import com.wolder.redis.lock.RLock;
+import com.wolder.redis.lock.RedisLockUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

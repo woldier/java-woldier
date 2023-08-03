@@ -1,4 +1,4 @@
-package com.wolder.lock;
+package com.wolder.redis.lock;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;

@@ -1,14 +1,12 @@
-package com.wolder.lock;
+package com.wolder.redis.lock;
 
-import com.wolder.config.MessageReceiver;
+import com.wolder.redis.config.MessageReceiver;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
-import javax.xml.namespace.QName;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;

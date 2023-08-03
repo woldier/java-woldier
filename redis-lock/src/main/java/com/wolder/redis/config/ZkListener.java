@@ -1,4 +1,4 @@
-package com.wolder.config;
+package com.wolder.redis.config;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.*;
