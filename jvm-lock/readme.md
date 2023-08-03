@@ -258,7 +258,7 @@ We also use "next" links to implement blocking mechanics. The thread id for each
         for (;;) {  //自旋保证一定能够入队
             Node t = tail; //保存old队尾指针
             if (t == null) { // Must initialize 如果old tail指向的是null ,那么说明队空,那么需要初始化队列
-                if (compareAndSetHead(new Node())) //设置队头
+                if (compareAndSetHead(new Node())) //设置队头 此队列时有哨兵节点的
                     tail = head; //如果设置成功,那么队尾指向队头 ,然后结束本次循环,进入下次循环去做enq
             } else { //如果old 队尾指针不为null ,那么说明当前队列不为空,已经经过了初始化
                 node.prev = t; //设置node节点的前驱为 t(old tial)
@@ -336,7 +336,7 @@ class Node {
          */
         int ws = node.waitStatus; //获取node 当前的state
         if (ws < 0) //如果小于零 
-            compareAndSetWaitStatus(node, ws, 0); //做cas设置状态为0  看到这里还不确定为什么需要使用cas
+            compareAndSetWaitStatus(node, ws, 0); //做cas设置状态为0  (这里使用cas操作是因为其他的线程也有可能重新设置waitState的值)
 
         /*
          * Thread to unpark is held in successor, which is normally
@@ -380,25 +380,196 @@ class Node {
          * unparkSuccessor, we need to know if CAS to reset status
          * fails, if so rechecking.
          确保release 传播，即使有其他正在进行的acquires/releases。 
-         如果需要信号，则会尝试头部的unparkSuccessor。但如果不需要，则会将状态设置为 PROPAGATE，以确保释放后继续传播。
+         如果需要信号，则会尝试头节点的unparkSuccessor。但如果不需要，则会将状态设置为 PROPAGATE，以确保释放后继续传播。
          此外，如果有新节点添加进来，我们必须循环处理时。
          另外，与 unparkSuccessor 不同，我们需要知道重置状态的 CAS 如果失败，则需要重新检查。
          */
         for (;;) {
-            Node h = head;
-            if (h != null && h != tail) {
-                int ws = h.waitStatus;
-                if (ws == Node.SIGNAL) {
-                    if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
+            Node h = head; //记录head节点的引用 
+            if (h != null && h != tail) { //如果h 为null 说明现在队列还没有初始化,或者h = tial 说明只有一个节点(哨兵) 那么是空队列
+                int ws = h.waitStatus;  //记录头节点的state
+                if (ws == Node.SIGNAL) { //如果当前节点的waitState是Node.SIGNA
+                    if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))  //cas设置成0不成功,进行下次循环
                         continue;            // loop to recheck cases
-                    unparkSuccessor(h);
+                    unparkSuccessor(h); //cas 成功设置成0 那么就唤醒后继
                 }
-                else if (ws == 0 &&
+                else if (ws == 0 && //ws是初始状态并且设置成Node.PROPAGATE失败,进行下次循环
                          !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
                     continue;                // loop on failed CAS
             }
-            if (h == head)                   // loop if head changed
+             //能够执行到这里  说明现在已经将head的值设置成了Node.PROPAGATE
+            if (h == head)                   // loop if head changed 
                 break;
+        }
+    }
+```
+
+
+
+```java
+    /**
+     * Sets head of queue, and checks if successor may be waiting
+     * in shared mode, if so propagating if either propagate > 0 or
+     * PROPAGATE status was set.
+     *
+     * @param node the node
+     * @param propagate the return value from a tryAcquireShared
+     */
+    private void setHeadAndPropagate(Node node, int propagate) {
+        Node h = head; // Record old head for check below
+        setHead(node);
+        /*
+         * Try to signal next queued node if:
+         *   Propagation was indicated by caller,
+         *     or was recorded (as h.waitStatus either before
+         *     or after setHead) by a previous operation
+         *     (note: this uses sign-check of waitStatus because
+         *      PROPAGATE status may transition to SIGNAL.)
+         * and
+         *   The next node is waiting in shared mode,
+         *     or we don't know, because it appears null
+         *
+         * The conservatism in both of these checks may cause
+         * unnecessary wake-ups, but only when there are multiple
+         * racing acquires/releases, so most need signals now or soon
+         * anyway.
+         */
+        if (propagate > 0 || h == null || h.waitStatus < 0 ||
+            (h = head) == null || h.waitStatus < 0) {
+            Node s = node.next;
+            if (s == null || s.isShared())
+                doReleaseShared();
+        }
+    }
+
+```
+
+
+
+```java
+    /**
+     * Cancels an ongoing attempt to acquire.
+     *
+     * @param node the node
+     */
+    private void cancelAcquire(Node node) {
+        // Ignore if node doesn't exist
+        if (node == null)  //node 不存在
+            return;
+
+        node.thread = null; //取消node 与thread的绑定
+
+        // Skip cancelled predecessors
+        Node pred = node.prev; //记录node 的前驱
+        while (pred.waitStatus > 0) //如果前驱节点waitStatus是 1 说明已经cancel ,那么我们循环找前驱的前驱 直到跳出循环
+            node.prev = pred = pred.prev;
+
+        // predNext is the apparent node to unsplice. CASes below will
+        // fail if not, in which case, we lost race vs another cancel
+        // or signal, so no further action is necessary.
+        Node predNext = pred.next;
+
+        // Can use unconditional write instead of CAS here.
+        // After this atomic step, other Nodes can skip past us.
+        // Before, we are free of interference from other threads.
+        node.waitStatus = Node.CANCELLED;
+
+        // If we are the tail, remove ourselves.
+        if (node == tail && compareAndSetTail(node, pred)) { //如果cancle的节点是tail
+            compareAndSetNext(pred, predNext, null);
+        } else {
+            // If successor needs signal, try to set pred's next-link
+            // so it will get one. Otherwise wake it up to propagate.
+            int ws;
+            if (pred != head &&  //如果node 的前驱不是头节点
+                ((ws = pred.waitStatus) == Node.SIGNAL || //并且 (前驱的ws是signal或者(ws的状态<=0且成功cas设置前驱的ws为signal))
+                 (ws <= 0 && compareAndSetWaitStatus(pred, ws, Node.SIGNAL))) &&
+                pred.thread != null) { //并且 前驱中保存的线程引用不为null
+                Node next = node.next; //记录node 的后继
+                if (next != null && next.waitStatus <= 0) //后继不为null并且后继的ws<=0
+                    compareAndSetNext(pred, predNext, next); //cas 设置 node的前驱(pred)的新 后继为node的后继(next)
+            } else { //不满足的话
+                unparkSuccessor(node); //释放unpack 后继
+            }
+
+            node.next = node; // help GC
+        }
+    }
+```
+
+
+
+```java
+    /**
+     * Checks and updates status for a node that failed to acquire.
+     * Returns true if thread should block. This is the main signal
+     * control in all acquire loops.  Requires that pred == node.prev.
+     *
+     * @param pred node's predecessor holding status
+     * @param node the node
+     * @return {@code true} if thread should block
+     */
+    private static boolean shouldParkAfterFailedAcquire(Node pred, Node node) {
+        int ws = pred.waitStatus;
+        if (ws == Node.SIGNAL)
+            /*
+             * This node has already set status asking a release
+             * to signal it, so it can safely park.
+             */
+            return true;
+        if (ws > 0) {
+            /*
+             * Predecessor was cancelled. Skip over predecessors and
+             * indicate retry.
+             */
+            do {
+                node.prev = pred = pred.prev;
+            } while (pred.waitStatus > 0);
+            pred.next = node; //找到第一个ws不大于零的前驱
+        } else {
+            /*
+             * waitStatus must be 0 or PROPAGATE.  Indicate that we
+             * need a signal, but don't park yet.  Caller will need to
+             * retry to make sure it cannot acquire before parking.
+             */
+            compareAndSetWaitStatus(pred, ws, Node.SIGNAL);
+        }
+        return false;
+    }
+```
+
+
+
+```java
+    /**
+     * Acquires in exclusive uninterruptible mode for thread already in
+     * queue. Used by condition wait methods as well as acquire.
+     *
+     * @param node the node
+     * @param arg the acquire argument
+     * @return {@code true} if interrupted while waiting
+     */
+    final boolean acquireQueued(final Node node, int arg) {
+        boolean failed = true;
+        try {
+            boolean interrupted = false;
+            for (;;) {
+                final Node p = node.predecessor();  // 得到前驱
+                //如果p是头节点,并且尝试获取锁成功
+                if (p == head && tryAcquire(arg)) { //如果p是前驱,并且尝试获取锁成功了
+                    setHead(node); //那么该节点成为新的头节点
+                    p.next = null; // help GC 设置原来头节点的next 指针为null 相当于p出队了
+                    failed = false; //设置失败标志为false
+                    return interrupted; //返回打断标记
+                }
+                //如果上面if方法内的逻辑没有执行 那么会走到这里
+                if (shouldParkAfterFailedAcquire(p, node) && // 进入shouldParkAfterFailedAcquire方法 如果当前节点的ws是signal那么就接着执行 parkAndCheckInterrupt,如果ws的状态不是signal 那么会设置ws为signal 然后返回false 那么if条件不成立,进入下一次循环,下次执行到这里的时候 进入shouldParkAfterFailedAcquire方法就会返回true了.
+                    parkAndCheckInterrupt()) //如果shouldParkAfterFailedAcquire返回true就会进入parkAndCheckInterrupt pack住了,当被unpack会返回false 或者 被打断就会 ture
+                    interrupted = true;
+            }
+        } finally {
+            if (failed)
+                cancelAcquire(node);
         }
     }
 ```
