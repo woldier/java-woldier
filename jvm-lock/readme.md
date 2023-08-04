@@ -238,6 +238,8 @@ We also use "next" links to implement blocking mechanics. The thread id for each
 
  AQS类中定义了一些与队列
 
+##### 1.enq
+
 ```java
     /**
      * The number of nanoseconds for which it is faster to spin
@@ -271,7 +273,7 @@ We also use "next" links to implement blocking mechanics. The thread id for each
     }
 ```
 
-
+##### 2.addWaiter
 
 ```java
     /**
@@ -302,7 +304,7 @@ We also use "next" links to implement blocking mechanics. The thread id for each
         }
 ```
 
-
+##### 3.unparkSuccessor
 
 ```java
 class Node {
@@ -360,7 +362,7 @@ class Node {
     }
 ```
 
-
+##### 4.doReleaseShared
 
 ```java
     /**
@@ -404,7 +406,7 @@ class Node {
     }
 ```
 
-
+##### 5.setHeadAndPropagate
 
 ```java
     /**
@@ -444,7 +446,7 @@ class Node {
 
 ```
 
-
+##### 6.cancelAcquire
 
 ```java
     /**
@@ -497,7 +499,7 @@ class Node {
     }
 ```
 
-
+##### 7.shouldParkAfterFailedAcquire
 
 ```java
     /**
@@ -538,7 +540,7 @@ class Node {
     }
 ```
 
-
+##### 8.acquireQueued
 
 ```java
     /**
@@ -548,6 +550,7 @@ class Node {
      * @param node the node
      * @param arg the acquire argument
      * @return {@code true} if interrupted while waiting
+     * 本方法pack被打断会继续尝试获取锁,而不会因为线程被打断而停止回去锁,为了检测获取锁过程是否被打断过,因此设置了一个interrupted来ji
      */
     final boolean acquireQueued(final Node node, int arg) {
         boolean failed = true;
@@ -564,8 +567,39 @@ class Node {
                 }
                 //如果上面if方法内的逻辑没有执行 那么会走到这里
                 if (shouldParkAfterFailedAcquire(p, node) && // 进入shouldParkAfterFailedAcquire方法 如果当前节点的ws是signal那么就接着执行 parkAndCheckInterrupt,如果ws的状态不是signal 那么会设置ws为signal 然后返回false 那么if条件不成立,进入下一次循环,下次执行到这里的时候 进入shouldParkAfterFailedAcquire方法就会返回true了.
-                    parkAndCheckInterrupt()) //如果shouldParkAfterFailedAcquire返回true就会进入parkAndCheckInterrupt pack住了,当被unpack会返回false 或者 被打断就会 ture
+                    parkAndCheckInterrupt()) //如果shouldParkAfterFailedAcquire返回true就会进入parkAndCheckInterrupt pack住了,当被unpack会返回false 或者 被打断就会 返回 ture ,此时if条件成立了,那么就会设置interrupted标记为真,便于后续返回
                     interrupted = true;
+            }
+        } finally {
+            if (failed)  // 最终会执行这个判断,如果是走的加锁成功那么failed一定是flase,其他情况就是true,这时候就要从queue中移除node
+                cancelAcquire(node);
+        }
+    }
+```
+
+##### 9.doAcquireInterruptibly
+
+```java
+    /**
+     * Acquires in exclusive interruptible mode.
+     * @param arg the acquire argument
+     */
+    private void doAcquireInterruptibly(int arg)
+        throws InterruptedException {
+        final Node node = addWaiter(Node.EXCLUSIVE);
+        boolean failed = true;
+        try {
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head && tryAcquire(arg)) {
+                    setHead(node);
+                    p.next = null; // help GC
+                    failed = false;
+                    return;
+                }
+                if (shouldParkAfterFailedAcquire(p, node) &&
+                    parkAndCheckInterrupt())
+                    throw new InterruptedException();
             }
         } finally {
             if (failed)
@@ -573,6 +607,12 @@ class Node {
         }
     }
 ```
+
+
+
+
+
+
 
 
 
