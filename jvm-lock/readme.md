@@ -550,7 +550,7 @@ class Node {
      * @param node the node
      * @param arg the acquire argument
      * @return {@code true} if interrupted while waiting
-     * 本方法pack被打断会继续尝试获取锁,而不会因为线程被打断而停止回去锁,为了检测获取锁过程是否被打断过,因此设置了一个interrupted来ji
+     * 本方法pack被打断会继续尝试获取锁,而不会因为线程被打断而停止回去锁,为了检测获取锁过程是否被打断过,因此设置了一个interrupted来记录
      */
     final boolean acquireQueued(final Node node, int arg) {
         boolean failed = true;
@@ -583,10 +583,12 @@ class Node {
     /**
      * Acquires in exclusive interruptible mode.
      * @param arg the acquire argument
+     此方法的逻辑与acquireQueued逻辑时差不多的
+	唯一的不同是parkAndCheckInterrupt unpack后如果是被打断会返回ture那么会进入if的内部抛出异常
      */
     private void doAcquireInterruptibly(int arg)
         throws InterruptedException {
-        final Node node = addWaiter(Node.EXCLUSIVE);
+        final Node node = addWaiter(Node.EXCLUSIVE); 
         boolean failed = true;
         try {
             for (;;) {
@@ -598,12 +600,12 @@ class Node {
                     return;
                 }
                 if (shouldParkAfterFailedAcquire(p, node) &&
-                    parkAndCheckInterrupt())
+                    parkAndCheckInterrupt())//唯一的不同是parkAndCheckInterrupt unpack后如果是被打断后会进入if的内部抛出异常
                     throw new InterruptedException();
             }
         } finally {
             if (failed)
-                cancelAcquire(node);
+                cancelAcquire(node); //如果是失败,那么就会cancel
         }
     }
 ```
