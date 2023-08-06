@@ -110,6 +110,6 @@ sql优化
 
 # 2. 怎么用消息队列将串行任务变成并行
 
-
+![图片2](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2Fe1eaa2f7b2b6b76626a41a88f2fff68f.svg)
 
  
