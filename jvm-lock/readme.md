@@ -2,11 +2,104 @@
 
 ## 1.1. 深入理解synchronized 细节（锁膨胀过程，标识, ）
 
+首先需要介绍一下Monitor,Monitor是操作系统中的一个对象,其中的waitset保存了因为等待某条件而释放锁阻塞的线程, entry list存放了因为当前Monitor已经被其他的线程拥有了而阻塞等待锁释放然后获取锁的线程, owner则保存了当先持有锁的线程.
 
+Monitor与锁对象是关联的,一个锁对象对应一个Moniter.
+
+例如下面的伪代码
+
+```java
+public synchronized(obj) void lockService(){
+    //do sth ......
+    
+}
+```
+
+sync锁住的对象即为`obj` 那么obj的header的mark word部分保存的引用地址即为锁对象唯一对应的Monitor(重量锁条件下).
+
+
+
+![图片3](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F1460e842dfb232b464c104657d78d041.svg)
+
+### 1.1.1轻量级锁
+
+当有一个对象虽然被多个线程访问,但是多线程的访问时间是错开的, 这种情况下没有出现竞争, 那么就可以使用轻量级锁来优化,轻量级锁对使用者是透明的,依旧是synchronized.
+
+创建锁记录（Lock Record）对象，每个线程都的栈帧都会包含一个锁记录的结构，内部可以存储锁定对象的 Mark Word
+
+![图片5](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F9846b746661f9018b69a64b859e2deaf.svg)
+
+让锁记录中 Object reference 指向锁对象，并尝试用 cas 替换 Object 的 Mark Word(此时markword的后两位为01表示为未加锁)，将 Mark Word 的值存 入锁记录
+
+如果 cas 替换成功，对象头中存储了 锁记录地址和状态 00 ，表示由该线程给对象加锁，这时图示如下
+
+
+
+![图片6](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F8237f3aa17c641bedbb04485e39f73c6.svg)
+
+
+
+如果 cas 失败，有两种情况
+
+1. 如果是其它线程已经持有了该 Object 的轻量级锁，这时表明有竞争，进入锁膨胀过程
+2. 如果是自己执行了 synchronized 锁重入，那么再添加一条 Lock Record 作为重入的计数(如下图所示)
+
+
+
+![图片7](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F75b88ab911b1f515a43052ce7e2dfd36.svg)
+
+当退出 synchronized 代码块（解锁时）如果有取值为 null 的锁记录，表示有重入，这时重置锁记录，表示重 入计数减一
+
+当退出 synchronized 代码块（解锁时）锁记录的值不为 null，这时使用 cas 将 Mark Word 的值恢复给对象 头 成功，则解锁成功 失败，说明轻量级锁进行了锁膨胀或已经升级为重量级锁，进入重量级锁解锁流程
+
+### 1.1.2 锁膨胀
+
+如果在尝试加轻量级锁的过程中，CAS 操作无法成功，这时一种情况就是有其它线程为此对象加上了轻量级锁（有 竞争），这时需要进行锁膨胀，将轻量级锁变为重量级锁。
+
+![图片8](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2Fb7cd5655cd90c2d4ed3c49d6909c7e46.svg)
+
+
+
+当 Thread-2 进行轻量级加锁时，Thread-1 已经对该对象加了轻量级锁
+
+这时 Thread-1 加轻量级锁失败，进入锁膨胀流程 即为 Object 对象申请 Monitor 锁，让 Object 指向重量级锁地址 然后自己进入 Monitor 的 EntryList BLOCKED
+
+![图片9](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F9d7c54eb7ba0622230d644ad29e2a991.svg)
+
+当 Thread-0 退出同步块解锁时，使用 cas 将 Mark Word 的值恢复给对象头，失败。这时会进入重量级解锁 流程，即按照 Monitor 地址找到 Monitor 对象，设置 Owner 为 null，唤醒 EntryList 中 BLOCKED 线程
+
+
+
+### 1.1.3 对象头中的锁标识
+
+对于32位jvm其对象头结构如下
+
+| 			                Object Header (64bIt)                    |      
+
+| Mark word (32bit)        |         Klass word (32Bit)    |
+
+其中mark word 的结构如下
+
+
+
+|                             form                             |       state        |
+| :----------------------------------------------------------: | :----------------: |
+| hashcode:25bit \| age: 4bit \| biased_lock:0 (1bit) \| 01 (2bit) |       Normal       |
+| thread:23 \| epoch: 2 \| age:4bit\|  biased_lock:1 (1bit) \| 01 (2bit) |       Biased       |
+|            ptr_to_lock_record:30bit \| 00 (2bit)             | Lightweight Locked |
+|         ptr_to_heavyweight_monitor:30bit\| 10 (2bit)         | Heavyweight Locked |
+|                                                              | Marked for **GC**  |
+|                                                              |                    |
+
+### 1.1.4 偏向锁
+
+轻量级锁在没有竞争时（就自己这个线程），每次重入仍然需要执行 CAS 操作。 Java 6 中引入了偏向锁来做进一步优化：只有第一次使用 CAS 将线程 ID 设置到对象的 Mark Word 头，之后发现 这个线程 ID 是自己的就表示没有竞争，不用重新 CAS。以后只要不发生竞争，这个对象就归该线程所有
 
 ## 1.2.Lock子类深入了解区别,以及源码实现.
 
 ![image-20230806153051947](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F8bf09da9446119f7351eba8590530744.png)
+
+
 
 
 
@@ -1754,7 +1847,7 @@ AQS译名抽象队列化同步器, 他维护了一个同步队列(该同步队�
 
 下面展示了non-fair的加锁流程,fair的加锁流程与non-fair的加锁流程基本一致,唯一不同的是tryAcquire的逻辑.
 
-![图片1](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F1be0fa2f8df9eddb1dfb63d98193b649.svg)
+![](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F1be0fa2f8df9eddb1dfb63d98193b649.svg)
 
 
 
@@ -2303,6 +2396,42 @@ WriteLock的加锁过程,与Reentrant的逻辑几乎完全一致除了(tryAcquir
 
 ### 4.4.CountDownLatch
 
+CountDownLatch是一个同步辅助工具,允许一个或者多个线程等待其他线程执行完成一系列的操作. 一个CountDownLatch对象通过给的count参数进行初始化, 经过初始化后 所有需要等待其完成的线程 通过调用方法release,使得计数器到0. 这是一个一次性使用的类,(count计数到0不能恢复), 如果需要重复使用,可以考虑CyclicBarrier(不过需要注意重复使用时的问题,比如等待两个任务一个任务执行1s,另一个任务执行100s,如果控制好执行过程那么可能存在两个任务一执行完成,那么这样明显不合理)
+
+CountDownLatch 是一种多功能同步工具，可用于多种用途。初始化为 1 的 CountDownLatch 可用作简单的开/关锁存器或门：所有调用 await 的线程都在门上等待，直到调用 CountDown 的线程打开它。初始化为 N 的 CountDownLatch 可用于让一个线程等待，直到 N 个线程完成某个操作，或某个操作完成 N 次。
+
+内部维护一个Sync,其使用的是share模式,代码逻辑超级简单,如下
+
+```java
+   private static final class Sync extends AbstractQueuedSynchronizer {
+        private static final long serialVersionUID = 4982264981922014374L;
+
+        Sync(int count) {
+            setState(count);
+        }
+
+        int getCount() {
+            return getState();
+        }
+
+        protected int tryAcquireShared(int acquires) {
+            return (getState() == 0) ? 1 : -1; //如果当前状态是0 返回1否则返回0
+        }
+
+        protected boolean tryReleaseShared(int releases) {
+            // Decrement count; signal when transition to zero
+            for (;;) {
+                int c = getState(); //获取状态
+                if (c == 0 ) //如果为0 
+                    return false; //返回false
+                int nextc = c-1;
+                if (compareAndSetState(c, nextc)) //cas
+                    return nextc == 0;
+            }
+        }
+    }
+```
+
 
 
 
@@ -2315,31 +2444,60 @@ WriteLock的加锁过程,与Reentrant的逻辑几乎完全一致除了(tryAcquir
 
 ## 5.请解释一下Synchronized的锁粗化,什么场景使用到锁粗化? 怎么弄?
 
+对相同对象多次加锁，导致线程发生多次重入，可以使用锁粗化方式来优化.
 
+举个例子
 
-## 6.描述一下Synchronized锁膨胀 每一步的具体细节? 锁膨胀以后,没有请求了,依然是重量级
+```java
+public void test(){
+    for(int i=0;i<100000;i++){
+        synchronized(lockObj){
+            //do sth ..............
+        }
+    }
+}
+```
 
-## 锁怎么办?
+如果JVM检测到有一连串零碎的操作都是对同一对象的加锁，将会**扩大加锁同步的范围（即锁粗化）到整个操作序列的外部。**上述代码是对某个操作重入加锁,然而这种重入加锁的性能损耗很大,因此就进行了锁粗化
 
+```java
+public void test(){
+     synchronized(lockObj){
+            for(int i=0;i<100000;i++){
 
+                    //do sth ..............
+
+            }
+         }
+}
+```
+
+## 6.描述一下Synchronized锁膨胀 每一步的具体细节? 锁膨胀以后,没有请求了,依然是重量级锁怎么办?
+
+没有加锁线程,那么将还原锁对象的markword ,之后再有线程前来加锁,发现锁对象markword 中保存的后三位是 001 说明是Normal状态,开始加锁,如果不存在竞争则会加轻量级锁,当只有该线程访问锁对象的时候则会优化为偏向锁,后来如果有其他线程也在交替使用锁,当超过一定次数后则撤销锁偏向,变为轻量级锁,如果此时使用锁的方式不再是交替,而是存在竞争则会变为重量级锁.
 
 ## 7.Synchronized头信息存了什么,膨胀的每一步存储哪些东西,为什么要存这些?
 
-
-
-
+参见问题1
 
 ## 8.ReentrantLock中公平锁,非公平锁都实现了抽象类AbstractQueuedSynchronizer,  请问,AQS里面的原理是什么? 为什么要实现AQS?
 
+AQS定义了阻塞等待队列,条件等待队列.并且抽象出了阻塞获取锁的逻辑,如果不能够获取锁就到sync queue中去阻塞,然后等待前驱将其唤醒. sync队列是基于双向链表的队列,并且有头哨兵(且使用laza init),其保证了prev指针的一致性,也就是说能够保证从队尾成功遍历到队头,而不一定能保证从队头遍历到队尾. 对于条件等待队列,其中的节点全部来自于获取了锁的线程, 获取锁的线程因为等待某个临界的资源而不得不去等待,当等待的临界资源满足之后,可以重新回到sync队列中,等待获取锁成功.
+
 ## 9.ReentrantLock和ReentrantReadWriteLock实现原理的区别是什么? 写操作多于读操作的时候,应该用哪个锁?
 
-
+- ReentrantLock重入的原理是通过先比较当前拥有AQS的线程是否是自己,如果是自己的话,那么尝试将state加1,如果累加之后state溢出了,那么超过了最大的重入次数,抛出错误(但是实际上这种情况出现的概率几乎为0,因为state支持的最大整数为2^(31) -1,如果需要重入这么多的次数那么栈深度需要大于这个值,很明显超过了默认的jvm栈大小512K ).
+- ReentrantReadWriteLock中有两把锁,readLock和writeLock,readLock是基于share mode ,也就是说多个读线程是可以同时获取到锁的,但是当读锁生效的时候,写线程是无法获取写锁的只能阻塞等待.而writeLock是基于Exclusive mode,那么当某线程获取读锁时其他线程既不能获取读锁,也不能获取写锁,但是当前线程可以拥有读锁.
 
 ##  10.ReentrantReadWriteLock什么情况下共享模式,什么情况下独占模式?请列举相关代码.
+
+读锁是基于共享模式,而写锁是基于独占模式,代码详见4.3
 
 
 
 ## 11.AQS如何实现的FIFO? 请什么原理以及列举相关代码.
+
+AQS的FIFO是带哨兵的双向链表,并确保prev指针的一致性.代码详见 1.2.2.2.1 enq
 
 
 
@@ -2347,5 +2505,8 @@ WriteLock的加锁过程,与Reentrant的逻辑几乎完全一致除了(tryAcquir
 
 
 
+思路是在自旋获取锁的同时会计算剩余的等待时间,如果等待时间小于零,那么就超时了,因此就直接跳出自旋,并且将thread从sync queue中移除,源码详见1.2.2.2.16 tryAcquireNanos
+
 ## 13CountDownLatch 如何实现计数器? 其中await是怎么实现的? await( long timeout,TimeUnit unit) 超时机制是怎么实现的?
 
+源码详见4.5
