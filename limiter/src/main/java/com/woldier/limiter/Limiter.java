@@ -1,7 +1,7 @@
 package com.woldier.limiter;
 
 /**
- * description TODO
+ * description 抽象接口
  *
  * @author: woldier wong
  * @date: 2023/8/7$ 20:14$

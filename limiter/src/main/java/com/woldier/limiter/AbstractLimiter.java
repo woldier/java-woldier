@@ -7,14 +7,14 @@ package com.woldier.limiter;
  * @date: 2023/8/7$ 20:59$
  */
 public abstract class AbstractLimiter implements Limiter {
-    private long timeStamp = System.currentTimeMillis(); 
-    private final int  requestCount; //请求次数
-    private final  int limitNum ;//最大限流数
+    protected long timeStamp = System.currentTimeMillis();
+    protected  int  requestCount; //请求次数
+    protected final  int limitNum ;//最大限流数
 
-    private final long interval ;//时间窗口市场,单位ms
+    protected final long interval ;//时间窗口市场,单位ms
 
-    public AbstractLimiter(int requestCount, int limitNum, long interval) {
-        this.requestCount = requestCount;
+    public AbstractLimiter( int limitNum, long interval) {
+
         this.limitNum = limitNum;
         this.interval = interval;
     }
