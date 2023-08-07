@@ -24,7 +24,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.3</version>
+            <version>1.2.9</version>
         </dependency>
         <!-- commons-lang3 -->
         <dependency>
@@ -32,13 +32,11 @@
             <artifactId>hutool-all</artifactId>
             <version>5.8.20</version>
         </dependency>
-
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.13.2</version>
         </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
