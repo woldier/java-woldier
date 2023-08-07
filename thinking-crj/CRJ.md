@@ -112,4 +112,21 @@ sql优化
 
 ![图片2](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2Fe1eaa2f7b2b6b76626a41a88f2fff68f.svg)
 
- 
+可靠交付
+
+消息不丢失
+
+重连机制
+
+顺序性(多个消费者按照消息入队的顺序)
+
+刷盘(持久化),分布式
+
+幂等性
+
+检测心跳
+
+
+
+
+# 3.挑选一个消息中间件使用
