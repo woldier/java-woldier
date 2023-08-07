@@ -88,7 +88,7 @@ sync锁住的对象即为`obj` 那么obj的header的mark word部分保存的引�
 | thread:23 \| epoch: 2 \| age:4bit\|  biased_lock:1 (1bit) \| 01 (2bit) |       Biased       |
 |            ptr_to_lock_record:30bit \| 00 (2bit)             | Lightweight Locked |
 |         ptr_to_heavyweight_monitor:30bit\| 10 (2bit)         | Heavyweight Locked |
-|                                                              | Marked for **GC**  |
+|                          \|11(2bit)                          | Marked for **GC**  |
 |                                                              |                    |
 
 ### 1.1.4 偏向锁
@@ -103,7 +103,7 @@ sync锁住的对象即为`obj` 那么obj的header的mark word部分保存的引�
 
 
 
-### 1.2.1. AOS(AbstractOwnableSynchronizer)
+### 1.2.1. AQS(AbstractOwnableSynchronizer)
 
 - AOS(AbstractOwnableSynchronizer)抽象父类 ,定义了同步器,将锁与线程id进行绑定的成员便利与get与set的方法,需要注意的是,对于保存了owner thread引用的成员变量`exclusiveOwnerThread`,加了transient关键字,确保对象经过序列化与反序列化其对象引用都不会发生变化
 
@@ -1715,7 +1715,7 @@ class Node {
 >
 >  初始化数量为1的信号量在使用时, 只允许一个可以, 因此可以将这种特殊的信号量作为互斥锁(mutex)使用. 这个也常常被称为binary semaphore, 因为他只有两种状态, 1代表允许获取,0代表请求获取. 当用这种方式使用时(与juc中Lock接口的实现类不同),这种"锁"可以被其他线程释放,而并非锁的拥有者(因为semaphore没有拥有者的概念). 这种锁在某种情况下特别有用, 比如说死锁的恢复.
 
-
+ 
 
 
 
