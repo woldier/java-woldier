@@ -7,7 +7,7 @@ package com.woldier.limiter;
  * @date: 2023/8/7$ 21:23$
  */
 public class CountLimiter extends AbstractLimiter{
-    public CountLimiter(int requestCount, int limitNum, long interval) {
+    public CountLimiter( int limitNum, long interval) {
         super(limitNum, interval);
     }
 
