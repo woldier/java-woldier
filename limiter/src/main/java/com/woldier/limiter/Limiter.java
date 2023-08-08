@@ -6,7 +6,7 @@ package com.woldier.limiter;
  * @author: woldier wong
  * @date: 2023/8/7$ 20:14$
  */
-public interface Limiter {
+public interface Limiter{
     /**
     *
     * description 限流方法
