@@ -126,4 +126,24 @@ public class Test4Limiter {
         thread3.join();
         thread4.join();
     }
+
+    @Test
+    public void test4SWLimiter() throws InterruptedException {
+        Limiter limiter = new ShiftedWindowLimiter(2,3_000);
+        task(limiter);
+    }
+
+    @Test
+    public void test4LeakBucketLimiter() throws InterruptedException {
+        Limiter limiter = new LeakBucketLimiter(2,3_000);
+        task2(limiter);
+    }
+
+
+    @Test
+    public void test4TokenBucketLimiter() throws InterruptedException {
+        Limiter limiter = new TokenBucketLimiter(2,3_000);
+        task2(limiter);
+    }
+
 }

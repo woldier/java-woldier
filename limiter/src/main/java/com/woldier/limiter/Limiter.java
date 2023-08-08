@@ -16,5 +16,5 @@ public interface Limiter{
     * @author: woldier wong
     * @date: 2023/8/7 20:59
     */
-    boolean limit();
+    boolean limit() throws InterruptedException;
 }
