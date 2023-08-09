@@ -41,15 +41,15 @@ public class Showleaf {
     @Test
     public void test() {
         Map<Integer, Node> nodeMap = nodeList.stream().collect(Collectors.toMap(e -> e.id, e -> e)); //得到包含所有node map 索引时节点的id
-        Node node10 = nodeList.get(10 - 1);
-        Node node11 = nodeList.get(11 - 1);
-        Node node6 = nodeList.get(6 - 1);
+//        Node node10 = nodeList.get(10 - 1);
+//        Node node11 = nodeList.get(11 - 1);
+//        Node node6 = nodeList.get(6 - 1);
 
         //模拟查询到的数据
         List<Node> authList = new ArrayList<>();
-        authList.add(node10);
-        authList.add(node11);
-        authList.add(node6);
+//        authList.add(node10);
+//        authList.add(node11);
+//        authList.add(node6);
 
         //创建一个找父亲的map
         Map<Integer, Node> parentMap = new HashMap<>();
