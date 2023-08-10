@@ -7,7 +7,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-
+/**
+*
+* description 生产者
+*
+* @author: woldier wong
+* @date: 2023/8/10 17:31
+*/
 public class MQ_01_HelloWorld {
     /**
      * 步骤如下
