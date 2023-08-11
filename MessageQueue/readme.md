@@ -1026,3 +1026,399 @@ routing key 为"quick.orange.rabbit"的消息将会被投递给两个queue。 "l
 
 如果我们打破之前设定的词组结构，发送只含有一个单词的或者四个单词的routing key，比如说 "orange"或者"quick.orange.new.rabbit"？显然，如果这个routing key 不满足任意一个binding key，那么这条消息就会被丢弃。
 
+- provier
+
+```java
+package com.woldier;
+
+import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+
+/**
+ * Routing(topic)
+ * https://www.rabbitmq.com/tutorials/tutorial-five-java.html
+ */
+public class MQ_05_Topic {
+    final static String EXCHANGE_NAME = "test_topic";
+    /**
+     * 注意error.# 可以匹配error.ksksk.ksk 可以是长度为n的
+     */
+    final static String ROUTING_KEY[] = {"info.*","warn.*.woldier","error.#"};
+    final static String QUEUE_NAME[] = {"topic_info_*_queue","topic_warn_woldier_queue","topic_error_#_queue"};
+    final static String PUBLISH_ROUTING_KEY[] = {"info.ww","warn.xx.woldier","error.ksksk.ksk"};
+    final static int PUBLISH_ROUTING_KEY_POS = 1;
+    public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
+        // * 1.创建工厂
+        ConnectionFactory factory = new ConnectionFactory();
+        // * 2.设置连接参数
+        factory.setHost("tencent.woldier.top");//设置ip
+        factory.setPort(5672); //设置端口,管理页面中可以查看
+        factory.setVirtualHost("/woldier");//设置虚拟机
+        factory.setUsername("admin");
+        factory.setPassword("123456");
+        // * 3.通过工厂对象创建连接
+        Connection connection = factory.newConnection();
+        // * 4.设置channel
+        Channel channel = connection.createChannel();
+        // * 5.设置exchange
+ 
+        channel.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.TOPIC, true, true, false, null);
+
+        /**
+         * 绑定queue
+         */
+        for (int i= 0;i< QUEUE_NAME.length;i++) {
+            String s = QUEUE_NAME[i];
+            channel.queueDeclare(s,true,false,true,null);
+            /**
+             * 若要订阅更多的topic 在这里进行多次绑定即可
+             */
+            channel.queueBind(s,EXCHANGE_NAME,ROUTING_KEY[i]);
+        }
+
+        // * 6.发送消息
+        String msg = "hello rabbit topic";
+        channel.basicPublish(EXCHANGE_NAME, PUBLISH_ROUTING_KEY[PUBLISH_ROUTING_KEY_POS], null, msg.getBytes());
+
+
+        /*
+        释放资源
+         */
+        channel.close();
+        connection.close();
+    }
+}
+
+```
+
+- consumer
+
+```java
+package com.woldier;
+
+import com.rabbitmq.client.*;
+
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+
+public class MQ_05_TopicConsumer_01 {
+    final static String EXCHANGE_NAME = "test_topic";
+    /**
+     * 注意error.# 可以匹配error.ksksk.ksk 可以是长度为n的
+     */
+//    final static String ROUTING_KEY[] = {"info.*","warn.woldier","error.#"};
+    final static String QUEUE_NAME[] = {"topic_info_*_queue","topic_warn_woldier_queue","topic_error_#_queue"};
+    final static int QUEUE_POS = 0;
+   
+    public static void main(String[] args) throws IOException, TimeoutException {
+        // * 1.创建工厂
+        ConnectionFactory factory = new ConnectionFactory();
+        // * 2.设置连接参数
+        factory.setHost("tencent.woldier.top");//设置ip
+        factory.setPort(5672); //设置端口,管理页面中可以查看
+        factory.setVirtualHost("/woldier");//设置虚拟机
+        factory.setUsername("admin");
+        factory.setPassword("123456");
+        // * 3.通过工厂对象创建连接
+        Connection connection = factory.newConnection();
+        // * 4.设置channel
+        Channel channel = connection.createChannel();
+
+
+        //* 6.接收消息
+        
+        DefaultConsumer consumer = new DefaultConsumer(channel){
+           
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+
+                try {
+                    System.out.println("body = " +new String(body));
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                finally {
+                    //auto ack 设置为True 会自动确认 ,设置为false需要手动进行确认 在handleDelivery中进行确认
+                    //channel.basicAck(envelope.getDeliveryTag(),false);
+                }
+            }
+        };
+        //channel.basicQos(1);//设置每次只取一条数据
+        //auto ack 设置为True 会自动确认 ,设置为false需要手动进行确认 在handleDelivery中进行确认
+        channel.basicConsume(QUEUE_NAME[QUEUE_POS],true,consumer);
+
+        /**
+         * 最后不需要关闭channel 和 connection 因为需要持续监听
+         */
+        while (true);
+    }
+}
+
+```
+
+
+
+```java
+package com.woldier;
+
+import com.rabbitmq.client.*;
+
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+
+
+/**
+ * Routing(topic)
+ * https://www.rabbitmq.com/tutorials/tutorial-five-java.html
+ */
+public class MQ_05_TopicConsumer_02 {
+    final static String EXCHANGE_NAME = "test_topic";
+    /**
+     * 注意error.# 可以匹配error.ksksk.ksk 可以是长度为n的
+     */
+//    final static String ROUTING_KEY[] = {"info.*","warn.woldier","error.#"};
+    final static String QUEUE_NAME[] = {"topic_info_*_queue","topic_warn_woldier_queue","topic_error_#_queue"};
+    final static int QUEUE_POS = 1;
+  
+    public static void main(String[] args) throws IOException, TimeoutException {
+        // * 1.创建工厂
+        ConnectionFactory factory = new ConnectionFactory();
+        // * 2.设置连接参数
+        factory.setHost("tencent.woldier.top");//设置ip
+        factory.setPort(5672); //设置端口,管理页面中可以查看
+        factory.setVirtualHost("/woldier");//设置虚拟机
+        factory.setUsername("admin");
+        factory.setPassword("123456");
+        // * 3.通过工厂对象创建连接
+        Connection connection = factory.newConnection();
+        // * 4.设置channel
+        Channel channel = connection.createChannel();
+
+
+        //* 6.接收消息
+        
+        DefaultConsumer consumer = new DefaultConsumer(channel){
+            
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+
+                try {
+                    System.out.println("body = " +new String(body));
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                finally {
+                    //auto ack 设置为True 会自动确认 ,设置为false需要手动进行确认 在handleDelivery中进行确认
+                    //channel.basicAck(envelope.getDeliveryTag(),false);
+                }
+            }
+        };
+        //channel.basicQos(1);//设置每次只取一条数据
+        //auto ack 设置为True 会自动确认 ,设置为false需要手动进行确认 在handleDelivery中进行确认
+        channel.basicConsume(QUEUE_NAME[QUEUE_POS],true,consumer);
+
+        /**
+         * 最后不需要关闭channel 和 connection 因为需要持续监听
+         */
+        while (true);
+    }
+}
+
+```
+
+
+
+```java
+package com.woldier;
+
+import com.rabbitmq.client.*;
+
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+
+
+/**
+ * Routing(topic)
+ * https://www.rabbitmq.com/tutorials/tutorial-five-java.html
+ */
+public class MQ_05_TopicConsumer_03 {
+    final static String EXCHANGE_NAME = "test_topic";
+    /**
+     * 注意error.# 可以匹配error.ksksk.ksk 可以是长度为n的
+     */
+//    final static String ROUTING_KEY[] = {"info.*","warn.woldier","error.#"};
+    final static String QUEUE_NAME[] = {"topic_info_*_queue","topic_warn_woldier_queue","topic_error_#_queue"};
+    final static int QUEUE_POS = 2;
+    
+    public static void main(String[] args) throws IOException, TimeoutException {
+        // * 1.创建工厂
+        ConnectionFactory factory = new ConnectionFactory();
+        // * 2.设置连接参数
+        factory.setHost("tencent.woldier.top");//设置ip
+        factory.setPort(5672); //设置端口,管理页面中可以查看
+        factory.setVirtualHost("/woldier");//设置虚拟机
+        factory.setUsername("admin");
+        factory.setPassword("123456");
+        // * 3.通过工厂对象创建连接
+        Connection connection = factory.newConnection();
+        // * 4.设置channel
+        Channel channel = connection.createChannel();
+
+
+        //* 6.接收消息
+       
+        DefaultConsumer consumer = new DefaultConsumer(channel){
+            
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+
+                try {
+                    System.out.println("body = " +new String(body));
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                finally {
+                    //auto ack 设置为True 会自动确认 ,设置为false需要手动进行确认 在handleDelivery中进行确认
+                    //channel.basicAck(envelope.getDeliveryTag(),false);
+                }
+            }
+        };
+        //channel.basicQos(1);//设置每次只取一条数据
+        //auto ack 设置为True 会自动确认 ,设置为false需要手动进行确认 在handleDelivery中进行确认
+        channel.basicConsume(QUEUE_NAME[QUEUE_POS],true,consumer);
+
+        /**
+         * 最后不需要关闭channel 和 connection 因为需要持续监听
+         */
+        while (true);
+    }
+}
+
+```
+
+
+
+## 1.6 Remote procedure call (RPC)
+
+> In the second tutorial we learned how to use Work Queues to distribute time-consuming tasks among multiple workers.
+>
+> 在1.2 我们学习了则不能使用work queue 来分发耗时任务到workers。
+>
+> But what if we need to run a function on a remote computer and wait for the result? Well, that's a different story. This pattern is commonly known as Remote Procedure Call or RPC.
+>
+> 但是如果是我们需要运行一个远程方法并且等待其返回。
+>
+> In this tutorial we're going to use RabbitMQ to build an RPC system: a client and a scalable RPC server. As we don't have any time-consuming tasks that are worth distributing, we're going to create a dummy RPC service that returns Fibonacci numbers.
+>
+> 在这个小节，我们将使用rabbitmq 来构建一个RPC系统：一个客户端和一个可拓展的RPC服务。由于我们没有可用于分发的真实的耗时的task，在这里我们创建了一个虚假的返回斐波拉契数的RPC服务。
+>
+> 
+
+- client interface
+
+To illustrate how an RPC service could be used we're going to create a simple client class. It's going to expose a method named call which sends an RPC request and blocks until the answer is received:
+
+为了解释RPC服务应该怎么使用，我们将创建一个简单的客户端类。 该方法暴露出了一个名为call的方法，该方法发起了一个RPC请求并且阻塞等待直到结果返回。
+
+```java
+FibonacciRpcClient fibonacciRpc = new FibonacciRpcClient();
+String result = fibonacciRpc.call("4");
+System.out.println( "fib(4) is " + result);
+```
+
+> #### A note on RPC
+>
+> Although RPC is a pretty common pattern in computing, it's often criticised. The problems arise when a programmer is not aware whether a function call is local or if it's a slow RPC. Confusions like that result in an unpredictable system and adds unnecessary complexity to debugging. Instead of simplifying software, misused RPC can result in unmaintainable spaghetti code.
+>
+> 虽然RPC是计算时常用的模式，但是却饱受诟病。当程序员不知道调用的方法（function）是本地的耗时方法还是远程调用时，问题就出现了。这样的混淆导致了系统的不可预测性，并且增加了调试的难度。滥用RPC非但不会简化应用，并且还会带来无法挽回的“垃圾”代码。
+>
+> Bearing that in mind, consider the following advice: 
+>
+> - Make sure it's obvious which function call is local and which is remote. 确认的知道某个方法到底是本地方法还是远程调用
+> - Document your system. Make the dependencies between components clear. 规范的系统文档，使得组建之间的依赖关系非常的清楚。
+> - Handle error cases. How should the client react when the RPC server is down for a long time?错误处理，当RPC长期不可用时，客户端应该如何响应？
+>
+> When in doubt avoid RPC. If you can, you should use an asynchronous pipeline - instead of RPC-like blocking, results are asynchronously pushed to a next computation stage. 如有疑问，应该避免使用 RPC。如果可以，应该使用异步流水线--将结果异步推送到下一个计算阶段，而不是类似 RPC 的阻塞。
+
+- callback queue
+
+In general doing RPC over RabbitMQ is easy. A client sends a request message and a server replies with a response message. In order to receive a response we need to send a 'callback' queue address with the request. We can use the default queue (which is exclusive in the Java client). Let's try it:
+
+总的来说，使用RabbitMq来作为远程调用的中间件是非常容易的。一个客户端发送一条请求的message，随后一个服务提供者回复消息。为了收到响应，我们需要随请求发送一个 "回调 "队列地址。我们可以使用默认队列（这在 Java 客户端中是独有的）。让我们试试看：
+
+```java
+import com.rabbitmq.client.AMQP.BasicProperties;
+
+allbackQueueName = channel.queueDeclare().getQueue(); //定义一个临时队列
+
+BasicProperties props = new BasicProperties
+                            .Builder()
+                            .replyTo(callbackQueueName)//指定回调时使用的队列
+                            .build();
+
+channel.basicPublish("", "rpc_queue", props, message.getBytes());
+
+```
+
+> #### Message properties
+>
+> The AMQP 0-9-1 protocol predefines a set of 14 properties that go with a message. Most of the properties are rarely used, with the exception of the following:
+>
+> AMQP协议预先设定了14种随着消息一同传输的属性。其中的大多数属性非常少被使用，除了以下的几种：
+>
+> - deliveryMode: Marks a message as persistent (with a value of 2) or transient (any other value). You may remember this property from [the second tutorial](https://www.rabbitmq.com/tutorials/tutorial-two-java.html). 投递模式：标记一个消息是持久（值为2）还是暂存（其他任何值）。如果你查看了1.2小节或许会对该属性有印象。
+> - contentType: Used to describe the mime-type of the encoding. For example for the often used JSON encoding it is a good practice to set this property to: application/json. 内容的type：用于描述编码的mine- type。举个例子，对于常用的JSOn格式编码那么应该设置此属性为application/json。
+> - replyTo: Commonly used to name a callback queue. 回复给，常用于命名为一个callback queue
+> - correlationId: Useful to correlate RPC responses with requests. correlationId： 用于将 RPC 响应与请求相关联。
+
+- correlationId
+
+In the method presented above we suggest creating a callback queue for every RPC request. That's pretty inefficient, but fortunately there is a better way - let's create a single callback queue per client.
+
+针对于上面提出的方法，建议对于每一个RPC请求都创建一个callback queue。显然这样做是非常低效的，但幸运的是这里有着更好的方法--让我们为每个客户端创建一个回调队列。
+
+That raises a new issue, having received a response in that queue it's not clear to which request the response belongs. That's when the correlationId property is used. We're going to set it to a unique value for every request. Later, when we receive a message in the callback queue we'll look at this property, and based on that we'll be able to match a response with a request. If we see an unknown correlationId value, we may safely discard the message - it doesn't belong to our requests.
+
+这样做，随之而来产生了另一个问题，queue中已经收到的response怎么判断是属于哪一个请求的呢？这就是correlationId派上用场的时候了。对于每一个request我们将会将它设置为一个唯一的值。随后，当我们在callback queue中收到消息，我们将会查看这一属性，基于此我们就能后将request于response进行绑定。如果我们看见了一个未知的correlationId，我们将会安全的丢弃这一条消息 --这一条消息并不属于本队列。
+
+You may ask, why should we ignore unknown messages in the callback queue, rather than failing with an error? It's due to a possibility of a race condition on the server side. Although unlikely, it is possible that the RPC server will die just after sending us the answer, but before sending an acknowledgment message for the request. If that happens, the restarted RPC server will process the request again. That's why on the client we must handle the duplicate responses gracefully, and the RPC should ideally be idempotent.
+
+你也许会问，为什么我们要忽略存在于callback queue中的这一条未知的消息，而不是失败返回？这是由于server一端可能存在竞争条件。虽然，这种可能性不大，但 RPC 服务器有可能在向我们发送应答后，但在发送请求确认信息前就死机了。如果出现这种情况，重新启动的 RPC 服务器将再次处理请求。这就是为什么我们必须在客户端合理地处理重复响应，而且 RPC 最好是能够确保幂等性（idempotent，无论调用多少次，结果都是一样的）
+
+
+
+- summary
+
+![](https://www.rabbitmq.com/img/tutorials/python-six.png)
+
+Our RPC will work like this:
+
+- ------------------------------------
+
+  - For an RPC request, the Client sends a message with two properties: **replyTo**, which is set to an anonymous exclusive queue created just for the request, and **correlationId**, which is set to a unique value for every request. 对于一个RPC调用，客户端携带两个额外参数发送一条消息，replyTo来为请求request设置一个anonymous独占队列，correlationId用来为每一个请求设置一个唯一的值。
+  - The request is sent to an **rpc_queue** queue.     request请求将被送往 rpc_queue （名称来自上图）队列
+  - The RPC worker (aka: server) is waiting for requests on that queue. When a request appears, it does the job and sends a message with the result back to the Client, using the queue from the **replyTo** field.  RPC的worker（又称为server）随时等待接受来自于队列中的请求。当一个请求出现，server**处理请求并且根据请求中的replyTo发送response消息到客户端，
+  - The client waits for data on the reply queue. When a message appears, it checks the **correlationId** property. If it matches the value from the request it returns the response to the application.  客户端等待回复队列中的消息。当一条消息出现，检查correlationId字段。如果与请求的参数一致，那么返回response给应用。
+
+
+
+- server
+
+
+
+
+
+
+
+- client
+
+
+
