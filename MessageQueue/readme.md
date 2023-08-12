@@ -220,49 +220,14 @@ public class MQ_02_WorkQueue {
         // * 4.设置channel
         Channel channel = connection.createChannel();
         // * 5.设置queen
-
-        /**
-         像queueDeclare(String, boolean, boolean, boolean, Map)，
-         但是设置nowait标志为true并且不返回结果(因为没有来自服务器的响应)。
-         参数:
-         队列——队列的名称 ,有该名称的队列则不新建.
-         耐久——如果我们声明了一个耐久队列，则为true(该队列在服务器重启后仍然有效)
-         Exclusive—如果我们声明一个独占队列(仅限于此连接)，则为真。
-         autoDelete -如果我们声明了一个自动删除队列，则为true(服务器将在不再使用时删除它) 参数-队列的其他属性(构造参数) 抛出: IOException -如果遇到错误
-         */
-//        void queueDeclareNoWait(String queue, boolean durable, boolean exclusive, boolean autoDelete,Map<String, Object> arguments) throws IOException;
         channel.queueDeclare("work-queues",true,false,false,null);
-
-
-
-
-
         // * 6.发送消息
-        /**
-         Publish a message. Publishing to a non-existent exchange will result in a channel-level protocol exception, which closes the channel. Invocations of Channel#basicPublish will eventually block if a resource-driven alarm  is in effect.
-         发布一条消息。发布到不存在的交换将导致通道级协议异常，从而关闭通道。如果资源驱动的告警生效，通道#basicPublish的调用将最终被阻塞
-         Params:
-         exchange – the exchange to publish the message to 将消息发布到的交换器 ,简单模式下为默认的给空字符就可以了
-         routingKey – the routing key 路由键
-         mandatory – true if the 'mandatory' flag is to be set 如果要设置' Mandatory '标志，则为true
-         immediate – true if the 'immediate' flag is to be set. Note that the RabbitMQ server does not support this flag
-         如果要设置' Immediate '标志，则为true。注意RabbitMQ服务器不支持这个标志
-         props – other properties for the message - routing headers etc 消息的其他属性—路由标题等
-         body – the message body 消息正问
-         Throws:
-         IOException – if an error is encountered
-         See Also:
-         AMQP.Basic.Publish, Resource-driven alarms
-         */
+       
         String msg = "hello rabbit ";
-        //void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, BasicProperties props, byte[] body)throws IOException;
         for (int i =0;i<10;i++){
             channel.basicPublish("","work-queues",null,new String(msg+i).getBytes());
 
         }
-
-
-
         /*
         释放资源
          */
@@ -301,17 +266,6 @@ import java.util.concurrent.TimeoutException;
  * @date: 2023/8/11$ 10:10$
  */
 public class MQ_01_WorkQueueConsumer {
-    /**
-     * 步骤如下
-     * 1.创建连接工厂
-     * 2.设置连接工厂连接参数
-     * 3.通过工厂对象创建连接
-     * 4.创建channel
-     * 5.channel创建queen
-     * 6.接收消息
-     *
-     * @param args
-     */
     public static void main(String[] args) throws IOException, TimeoutException {
         // * 1.创建工厂
         ConnectionFactory factory = new ConnectionFactory();
@@ -574,7 +528,7 @@ public class MQ_03_PubSub {
 
 
 
-![image-20230811172901673](/Users/user/Library/Application Support/typora-user-images/image-20230811172901673.png)
+![image-20230811172901673](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/13b3acd408de09ca86349a25c1befa89.png)
 
 - consumer
 
@@ -654,7 +608,7 @@ public class MQ_03_PubSubConsumer {
 
 ```
 
-![image-20230811173333737](/Users/user/Library/Application Support/typora-user-images/image-20230811173333737.png)
+![image-20230811173333737](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/7d5181a61bd71ef5b3ca50c93bccd603.png)
 
 ![image-20230811173302261](/Users/user/Library/Application Support/typora-user-images/image-20230811173302261.png)
 
@@ -811,7 +765,7 @@ public class MQ_04_Routing {
 
 
 
-![image-20230811190647934](/Users/user/Library/Application Support/typora-user-images/image-20230811190647934.png)
+![image-20230811190647934](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/880516c6acee27481c407ea6c7d60643.png)
 
 - 消费者
 
@@ -950,7 +904,7 @@ public class MQ_04_RoutingErrConsumer {
 
 
 
-![image-20230811191054637](/Users/user/Library/Application Support/typora-user-images/image-20230811191054637.png)
+![image-20230811191054637](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/0ec7e58ff626ee95ca3eaea7cede6f29.png)
 
 观察可以发现，发送的一条error的消息out的数目是2，即被两个服务都接收到了
 
@@ -1412,6 +1366,74 @@ Our RPC will work like this:
 
 - server
 
+```java
+package com.woldier;
+
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
+public class MQ_06_RPC {
+    public static void main(String[] args) throws IOException, TimeoutException, InterruptedException, ExecutionException {
+        // * 1.创建工厂
+        ConnectionFactory factory = new ConnectionFactory();
+        // * 2.设置连接参数
+        factory.setHost("tencent.woldier.top");//设置ip
+        factory.setPort(5672); //设置端口,管理页面中可以查看
+        factory.setVirtualHost("/woldier");//设置虚拟机
+        factory.setUsername("admin");
+        factory.setPassword("123456");
+        // * 3.通过工厂对象创建连接
+        Connection connection = factory.newConnection();
+        // * 4.设置channel
+        Channel channel = connection.createChannel();
+        // * 5.设置queen
+//        void queueDeclareNoWait(String queue, boolean durable, boolean exclusive, boolean autoDelete,Map<String, Object> arguments) throws IOException;
+        //channel.queueDeclare("rpc-queues",true,false,false,null);
+        // * 6.发送消息
+        final String corrId = UUID
+                .randomUUID().toString();  //得到一个uuid作为correlationId
+
+        String replyQueueName = channel.queueDeclare().getQueue();  //随机生成一个用于返回调用返回的queue
+        AMQP.BasicProperties props = new AMQP.BasicProperties
+                .Builder()
+                .correlationId(corrId)
+                .replyTo(replyQueueName)
+                .build();
+        String msg = "11";
+
+        channel.basicPublish("","rpc-queues",props,new String(msg).getBytes());  //发起请求
+
+        final CompletableFuture<String> response = new CompletableFuture<>();
+
+        String ctag = channel.basicConsume(replyQueueName, true, (consumerTag, delivery) -> {
+            if (delivery.getProperties().getCorrelationId().equals(corrId)) {
+                response.complete(new String(delivery.getBody(), "UTF-8"));
+            }
+        }, consumerTag -> {
+        });
+        String result = response.get();  //阻塞等待返回
+        System.out.println("result = " + result);
+        channel.basicCancel(ctag); //告知mq处理ok
+        /*
+        释放资源
+         */
+        channel.close();
+        connection.close();
+
+    }
+}
+
+```
+
 
 
 
@@ -1419,6 +1441,281 @@ Our RPC will work like this:
 
 
 - client
+
+```java
+package com.woldier;
+
+import com.rabbitmq.client.*;
+
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+/**
+*
+* description RPC 服务端
+*
+* @author: woldier wong
+* @date: 2023/8/12 14:27
+*/
+public class MQ_06_RPCServer {
+
+    private static int fib(int n) {
+        if (n == 0) return 0;
+        if (n == 1) return 1;
+        return fib(n - 1) + fib(n - 2);
+    }
+    public static void main(String[] args) throws IOException, TimeoutException {
+        // * 1.创建工厂
+        ConnectionFactory factory = new ConnectionFactory();
+        // * 2.设置连接参数
+        factory.setHost("tencent.woldier.top");//设置ip
+        factory.setPort(5672); //设置端口,管理页面中可以查看
+        factory.setVirtualHost("/woldier");//设置虚拟机
+        factory.setUsername("admin");
+        factory.setPassword("123456");
+        // * 3.通过工厂对象创建连接
+        Connection connection = factory.newConnection();
+        // * 4.设置channel
+        Channel channel = connection.createChannel();
+        // * 5.设置queen
+//        void queueDeclareNoWait(String queue, boolean durable, boolean exclusive, boolean autoDelete,Map<String, Object> arguments) throws IOException;
+        channel.queueDeclare("rpc-queues",true,false,false,null);
+        channel.queuePurge("rpc-queues");
+        //* 6.接收消息
+        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+            AMQP.BasicProperties replyProps = new AMQP.BasicProperties
+                    .Builder()
+                    .correlationId(delivery.getProperties().getCorrelationId())
+                    .build();
+
+            String response = "";
+            try {
+                String message = new String(delivery.getBody(), "UTF-8");
+                int n = Integer.parseInt(message);
+
+                System.out.println(" [.] fib(" + message + ")");
+                response += fib(n);
+            } catch (RuntimeException e) {
+                System.out.println(" [.] " + e);
+            } finally {
+                channel.basicPublish("", delivery.getProperties().getReplyTo(), replyProps, response.getBytes("UTF-8"));
+                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+            }
+        };
+        channel.basicQos(1);//设置每次只取一条数据
+        //auto ack 设置为True 会自动确认 ,设置为false需要手动进行确认 在handleDelivery中进行确认
+        channel.basicConsume("rpc-queues",false,deliverCallback,e->{});
+
+        /**
+         * 最后不需要关闭channel 和 connection 因为需要持续监听
+         */
+        while (true);
+    }
+}
+
+```
+
+server端打印的日志
+
+```shell
+ [.] fib(11)
+ 
+ Process finished with exit code 0
+```
+
+client端打印的日志
+
+```java
+result = 89
+
+Process finished with exit code 0
+```
+
+## 1.7 publisher confirm
+
+> Publisher confirms are a RabbitMQ extension to implement reliable publishing. When publisher confirms are enabled on a channel, messages the client publishes are confirmed asynchronously by the broker, meaning they have been taken care of on the server side.
+>
+> Publisher confirms 是rabbitmq扩展的可靠发布的一个实现。当publisher confirms在channel中被开启时，客户端的消息发布者发布的消息被broker（代理）进行异步 的确认，这意味着
+
+- overview
+
+In this tutorial we're going to use publisher confirms to make sure published messages have safely reached the broker. We will cover several strategies to using publisher confirms and explain their pros and cons.
+
+在这一小节中，我们将会使用publisher confirm（发布者确认）模式来确保发布的消息安全的到达了broker。本小节将介绍发布者确认模式中的几种策略并且解释他们的优缺点。
+
+- Enabling Publisher Confirms on a Channel
+
+Publisher confirms are a RabbitMQ extension to the AMQP 0.9.1 protocol, so they are not enabled by default. Publisher confirms are enabled at the channel level with the confirmSelect method:
+
+发布者确认模式是rabbitmq对AMQP 0.9.1协议的拓展， 因此这个特性并没有被默认开启。 发布者确认模式可以在channel下通过以下代码开启：
+
+```java
+Channel channel = connection.createChannel();
+channel.confirmSelect();
+```
+
+This method must be called on every channel that you expect to use publisher confirms. Confirms should be enabled just once, not for every message published.
+
+在每个期望进行发布者确认的channel都必须启用这一选项。启用的次数仅仅需要一次，而不是每次发送消息都需要。
+
+- Strategy #1: Publishing Messages Individually
+
+Let's start with the simplest approach to publishing with confirms, that is, publishing a message and waiting synchronously for its confirmation:
+
+让我们从最简单的publish confirm开始，发布一条消息，然后异步的等待其异步确认。
+
+```java
+while (thereAreMessagesToPublish()) {
+    byte[] body = ...;
+    BasicProperties properties = ...;
+    channel.basicPublish(exchange, queue, properties, body);
+    // uses a 5 second timeout
+    channel.waitForConfirmsOrDie(5_000);
+}
+```
+
+In the previous example we publish a message as usual and wait for its confirmation with the `Channel#waitForConfirmsOrDie(long)` method. The method returns as soon as the message has been confirmed. If the message is not confirmed within the timeout or if it is nack-ed (meaning the broker could not take care of it for some reason), the method will throw an exception. The handling of the exception usually consists in logging an error message and/or retrying to send the message.
+
+在之前的例子中，我们发布了一条消息并且通过`Channel#waitForConfirmsOrDie(long)`等待确认。 一但消息被确认该方法立即返回。如果消息在达到超时时间之前一直未被确认，或者说这条消息“死掉了”（出于某种原因broker不能够关注到该条消息），那么该方法就会抛出异常。对于异常的处理常常包括记录发送消息失败的日志或者是重试发送消息。
+
+Different client libraries have different ways to synchronously deal with publisher confirms, so make sure to read carefully the documentation of the client you are using. 不用的客户端（不同的语言）依赖库有着不同的方式来异步执行发布者确认，因此确保仔细的查阅了你所使用的客户端的文档。
+
+This technique is very straightforward but also has a major drawback: it **significantly slows down publishing**, as the confirmation of a message blocks the publishing of all subsequent messages. This approach is not going to deliver throughput of more than a few hundreds of published messages per second. Nevertheless, this can be good enough for some applications.
+
+发布者确认技术的原理非常简答明了，不过仍然存在缺陷：其直接导致了publishing的速度变慢了，因为当前正在阻塞等待确认的消息阻碍了后续的消息的发送。这种方式的吞吐量不会超过几百条数据每秒。尽管如此，这种方式对于一些应用的需求来说是足够的。
+
+> #### Are Publisher Confirms Asynchronous? 发布者是异步确认的吗？
+>
+> We mentioned at the beginning that the broker confirms published messages asynchronously but in the first example the code waits synchronously until the message is confirmed. The client actually receives confirms asynchronously and unblocks the call to waitForConfirmsOrDie accordingly. Think of waitForConfirmsOrDie as a synchronous helper which relies on asynchronous notifications under the hood.
+>
+> 我们在开始的时候提到broker异步确认成功发步消息，但是在第一个示例中，代码同步的阻塞等待知道消息被确认发布了。客户端实际上是收到了异步的确认发布然后在唤醒阻塞的`waitForConfirmsOrDie`方法调用. 把waitForConfirmsOrDie当作是一个同步辅助方法，它的底层原理就是异步通知。
+
+- trategy #2: Publishing Messages in Batches
+
+To improve upon our previous example, we can publish a batch of messages and wait for this whole batch to be confirmed. The following example uses a batch of 100:
+
+为了优化前面的示例，我们可以发布一批次的消息并且等待这一个batch的消息被确认。接下的示例使用了含有100条数据的batch。
+
+```java
+int batchSize = 100;
+int outstandingMessageCount = 0;
+while (thereAreMessagesToPublish()) {
+    byte[] body = ...;
+    BasicProperties properties = ...;
+    channel.basicPublish(exchange, queue, properties, body);
+    outstandingMessageCount++;
+    if (outstandingMessageCount == batchSize) {
+        channel.waitForConfirmsOrDie(5_000);
+        outstandingMessageCount = 0;
+    }
+}
+if (outstandingMessageCount > 0) {
+    channel.waitForConfirmsOrDie(5_000);
+}
+```
+
+Waiting for a batch of messages to be confirmed improves throughput drastically over waiting for a confirm for individual message (up to 20-30 times with a remote RabbitMQ node). One drawback is that we do not know exactly what went wrong in case of failure, so we may have to keep a whole batch in memory to log something meaningful or to re-publish the messages. And this solution is still synchronous, so it blocks the publishing of messages.
+
+与等待单条消息的确认相比，等待一批消息的确认可大幅提高吞吐量（远程 RabbitMQ 节点的确认次数可达 20-30 次）。这种方法的一个缺点是，如果出现故障，我们不知道到底是哪里出了问题，因此可能需要在内存中保留整个批处理，以便记录一些有意义的信息或重新发布报文。而且这种解决方案仍然是同步的，因此会阻止信息的发布。
+
+- Strategy #3: Handling Publisher Confirms Asynchronously
+
+The broker confirms published messages asynchronously, one just needs to register a callback on the client to be notified of these confirms:
+
+broker异步的确认发布消息，那么只需要在客户端中注册一个回调以通知这条发布的消息被确认了：
+
+```java
+Channel channel = connection.createChannel();
+channel.confirmSelect();
+channel.addConfirmListener((sequenceNumber, multiple) -> {
+    // code when message is confirmed
+}, (sequenceNumber, multiple) -> {
+    // code when message is nack-ed
+});
+```
+
+There are 2 callbacks: one for confirmed messages and one for nack-ed messages (messages that can be considered lost by the broker). Each callback has 2 parameters:
+
+这里有两个回调，一个用于成功被确认的消息，另一个用户没有被ack的消息（这样的消息可能是被broker丢失了）。每个回调方法都有两个参数：
+
+- sequence number: a number that identifies the confirmed or nack-ed message. We will see shortly how to correlate it with the published message. 一个用于区分消息的数。后面将介绍怎么讲其与发布的消息联系起来。
+
+multiple: this is a boolean value. If false, only one message is confirmed/nack-ed, if true, all messages with a lower or equal sequence number are confirmed/nack-ed. 传递的是一个boolean3。如果返回false，那么只有一条消息被确认或者non-ack，如果值为true，所有等于或者是小于当前sequence number的消息都被成功的接受到了（类似于计算机网络中的滑动窗口算法）
+
+The sequence number can be obtained with Channel#getNextPublishSeqNo() before publishing:
+
+sequence number 的值可以通过`Channel#getNextPublishSeqNo()`方法获得。
+
+```java
+int sequenceNumber = channel.getNextPublishSeqNo());
+ch.basicPublish(exchange, queue, properties, body);
+```
+
+A simple way to correlate messages with sequence number consists in using a map. Let's assume we want to publish strings because they are easy to turn into an array of bytes for publishing. Here is a code sample that uses a map to correlate the publishing sequence number with the string body of the message:
+
+将消息与sequence number联系起来的简单办法是通过map。假设我们想要发送一条string消息（发送string消息是因为它可以方便的转换为byte数组用于发布）。这里给出了使用map结构来将message与sequence number联系起来的简单代码示例：
+
+```java
+ConcurrentNavigableMap<Long, String> outstandingConfirms = new ConcurrentSkipListMap<>();
+// ... code for confirm callbacks will come later
+String body = "...";
+outstandingConfirms.put(channel.getNextPublishSeqNo(), body);
+channel.basicPublish(exchange, queue, properties, body.getBytes());
+```
+
+The publishing code now tracks outbound messages with a map. We need to clean this map when confirms arrive and do something like logging a warning when messages are nack-ed:
+
+现在，发布代码通过一个map来跟踪出站消息。我们需要在确认信息到达时清理该映射，并在信息被删除时发出警告：
+
+```java
+ConcurrentNavigableMap<Long, String> outstandingConfirms = new ConcurrentSkipListMap<>();
+ConfirmCallback cleanOutstandingConfirms = (sequenceNumber, multiple) -> {
+    if (multiple) {
+        ConcurrentNavigableMap<Long, String> confirmed = outstandingConfirms.headMap(
+          sequenceNumber, true
+        );
+        confirmed.clear();
+    } else {
+        outstandingConfirms.remove(sequenceNumber);
+    }
+};
+
+channel.addConfirmListener(
+  cleanOutstandingConfirms, //第一个，成功的回调
+  (sequenceNumber, multiple) -> { //第二个，失败的回调，在删除map中对应的key之前，应该做一些额外的处理
+    String body = outstandingConfirms.get(sequenceNumber);
+    System.err.format(
+      "Message with body %s has been nack-ed. Sequence number: %d, multiple: %b%n",
+      body, sequenceNumber, multiple
+    );
+    cleanOutstandingConfirms.handle(sequenceNumber, multiple);
+});
+// ... publishing code
+```
+
+The previous sample contains a callback that cleans the map when confirms arrive. Note this callback handles both single and multiple confirms. This callback is used when confirms arrive (as the first argument of Channel#addConfirmListener). The callback for nack-ed messages retrieves the message body and issues a warning. It then re-uses the previous callback to clean the map of outstanding confirms (whether messages are confirmed or nack-ed, their corresponding entries in the map must be removed.)
+
+上面的示例介绍了当一个消息被确认后将其从map中删除。注意到这个回调同时处理单信息或者多信息确认。这个回调将会在确认到达时被调用（` Channel#addConfirmListener`的第一个参数）。non-acked消息确认会消息的body并且发出警告。随后重用之前的回调来清理map中对应的为完成确认的message（无论是那种情况map中对应的实体都会被清除）
+
+> #### How to Track Outstanding Confirms? 怎么跟踪未完成确认的消息呢？
+>
+> Our samples use a ConcurrentNavigableMap to track outstanding confirms. This data structure is convenient for several reasons. It allows to easily correlate a sequence number with a message (whatever the message data is) and to easily clean the entries up to a given sequence id (to handle multiple confirms/nacks). At last, it supports concurrent access, because confirm callbacks are called in a thread owned by the client library, which should be kept different from the publishing thread.
+>
+> 示例中使用的是`ConcurrentNavigableMap`来追踪未完成的确认消息。使用这样的数据结构是基于几方面的考量。map结构使得可以方便的将sequence number与message进行关联（无论消息内容是什么）并且可以很方便的根据给出的sequence number从map中**<u>移除id小于对应值的实体</u>**（处理多消息确认情况）。最后，其支持并发访问，因为确认回调方法被一个线程调用，而这个线程一直与发布消息的线程都是不一致的。
+>
+> There are other ways to track outstanding confirms than with a sophisticated map implementation, like using a simple concurrent hash map and a variable to track the lower bound of the publishing sequence, but they are usually more involved and do not belong to a tutorial.
+>
+> 这里也有其他的方法来追踪未完成确认的消息，而不是通过一个繁杂的map实现，比如使用简单的concurrent hash map（虽然也很复杂）以及一个变量来跟踪publishing sequence的下界，不过这种方法比较复杂，这里只是提供思路。
+
+
+
+To sum up, handling publisher confirms asynchronously usually requires the following steps:
+
+小结一下，异步处理 publisher confirm常常需要以下的步骤：
+
+- provide a way to correlate the publishing sequence number with a message. 提供一个方法关联publishing sequence number与message
+
+- register a confirm listener on the channel to be notified when publisher acks/nacks arrive to perform the appropriate actions, like logging or re-publishing a nack-ed message. The sequence-number-to-message correlation mechanism may also require some cleaning during this step.         在通道上注册一个confirm监听器用来接受发布者消息的ack/non-ack时的异步通知，执行相关的操作，如记录或者重新发布被non-ack的消息。在此步骤中可能能还需要对存储的序列号与信息关联的信息进行清理
+- track the publishing sequence number before publishing a message.  在发布前跟踪sequence number 
 
 
 
