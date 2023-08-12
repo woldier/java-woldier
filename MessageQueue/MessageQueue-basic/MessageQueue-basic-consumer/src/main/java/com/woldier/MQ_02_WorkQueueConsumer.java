@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException;
  * @author: woldier wong
  * @date: 2023/8/11$ 10:10$
  */
-public class MQ_01_WorkQueueConsumer {
+public class MQ_02_WorkQueueConsumer {
     /**
      * 步骤如下
      * 1.创建连接工厂
