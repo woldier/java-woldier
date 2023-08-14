@@ -20,15 +20,15 @@
 
 因此需要去创建,并且与某用户进行绑定.
 
-![image-20230810093755453](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230810093755453.png)
+![虚拟主机与某用户绑定](https://img-blog.csdnimg.cn/5c3dc06f8047432b966d312789230921.png#pic_center)
 
 填入信息
 
-![image-20230810094038376](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230810094038376.png)
+![在这里插入图片描述](https://img-blog.csdnimg.cn/2adfce9cf3314625bf6465a105b59109.png#pic_center)
 
 随后,点击刚刚创建virtual host可以进入到设置页面进行虚拟主机的配置
 
-![image-20230810094259920](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230810094259920.png)
+![在这里插入图片描述](https://img-blog.csdnimg.cn/1b62603c5ddf439b85666b2d8969de97.png#pic_center)
 
 
 
@@ -90,9 +90,9 @@ public class MQ_01_HelloWorld {
 
 可以看到我们在发送的时候设置的`exchange`为空字符串,那么他到底是不是走的默认交换机呢?
 
-![image-20230810094905244](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230810094905244.png)
+![在这里插入图片描述](https://img-blog.csdnimg.cn/1fbeb4a0446f46e19f0e67762b6da5bb.png#pic_center)
 
-![image-20230810094839536](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230810094839536.png)
+![在这里插入图片描述](https://img-blog.csdnimg.cn/4ac3e6cedeaa45129349b6bfe798f796.png#pic_center)
 
 通过web management可以发现,确实走的是默认的交换机
 
@@ -177,7 +177,7 @@ consumerTag = amq.ctag-tJiO7cV5jKCb6xlKTFmddg,
 
 去web management,可以看到消息被成功消费
 
-![image-20230810173729921](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230810173729921.png)
+![在这里插入图片描述](https://img-blog.csdnimg.cn/8153ed9c99184ac8b136bb528c99047a.png#pic_center)
 
 
 
