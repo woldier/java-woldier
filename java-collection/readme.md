@@ -1,5 +1,11 @@
 > # java集合类
 
+
+
+# 0.Preliminary
+
+集合类继承了迭代器接口`Iterable<T>`,那么作为前置知识,我们必须要全面的了解该接口以及`Iterator<T>`类
+
 # 1.Collection
 
 
@@ -43,3 +49,76 @@
 
 
 
+`Collection` 继承了 接口
+
+```java
+public interface Collection<E> extends Iterable<E> {
+    //..................
+```
+
+
+
+```java
+    int size();
+    boolean isEmpty();
+    boolean contains(Object o);
+    Iterator<E> iterator(); //来自Iterable接口
+    Object[] toArray();
+    <T> T[] toArray(T[] a);
+    boolean add(E e);
+    boolean remove(Object o);
+    boolean containsAll(Collection<?> c);
+    boolean addAll(Collection<? extends E> c);
+    boolean removeAll(Collection<?> c);
+    boolean retainAll(Collection<?> c);
+    void clear();
+    boolean equals(Object o);
+    int hashCode();
+
+
+   
+```
+
+
+
+默认方法
+
+```java
+ default boolean removeIf(Predicate<? super E> filter) {
+        Objects.requireNonNull(filter);
+        boolean removed = false;
+        final Iterator<E> each = iterator();
+        while (each.hasNext()) {
+            if (filter.test(each.next())) {
+                each.remove();
+                removed = true;
+            }
+        }
+        return removed;
+    }
+
+@Override
+    default Spliterator<E> spliterator() {  //重写Iterable接口的默认方法
+        return Spliterators.spliterator(this, 0);
+    }
+
+
+    default Stream<E> stream() {
+        return StreamSupport.stream(spliterator(), false);
+    }
+
+
+
+    default Stream<E> parallelStream() {
+        return StreamSupport.stream(spliterator(), true);
+    }
+
+```
+
+`Collection`重写了`Iterable<E> `接口的默认方法`spliterator`,以及重新定义了`Iterator<E> iterator()`方法.
+
+以及重新定义了`Object`类的`boolean equals(Object o)`,`int hashCode()`方法,等待子实现类实现.
+
+继承了来自于`Iterable<E>`
+
+![image-20230816182642345](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230816182642345.png)
