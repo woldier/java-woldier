@@ -2,7 +2,7 @@
 >
 > 以rabbitmq为例(site:黑马rabbitmq实战)
 
-
+转发器.
 
 # 1.基础队列
 
@@ -1658,3 +1658,7 @@ channel.addConfirmListener(
 
 
 
+# 幂等性
+
+# 顺序性
+引入如三方控制, 获得到.
