@@ -8,7 +8,9 @@
 
 # 1.Collection
 
+写在前面 为什么Java中的Collection类都继承了抽象类还要实现抽象类的接口？
 
+refer : https://blog.csdn.net/weixin_50276625/article/details/115060330
 
 > The root interface in the collection hierarchy. A collection represents a group of objects, known as its elements. Some collections allow duplicate elements and others do not. Some are ordered and others unordered. The JDK does not provide any direct implementations of this interface: it provides implementations of more specific subinterfaces like Set and List. This interface is typically used to pass collections around and manipulate them where maximum generality is desired.
 >
