@@ -274,7 +274,7 @@ public boolean contains(Object o) {
         sb.append('['); //添加左括号
         for (;;) {
             E e = it.next();
-            sb.append(e == this ? "(this Collection)" : e);
+            sb.append(e == this ? "(this Collection)" : e); // 当包含了自己时, 打印(this Collection)
             if (! it.hasNext())
                 return sb.append(']').toString();
             sb.append(',').append(' ');
@@ -358,6 +358,52 @@ public boolean contains(Object o) {
 
 ## 1.2 List
 
+### 1.2.1 Preliminary ListIterator
+
+> An iterator for lists that allows the programmer to traverse the list in either direction, modify the list during iteration, and obtain the iterator's current position in the list. A ListIterator has no current element; its cursor position always lies between the element that would be returned by a call to previous() and the element that would be returned by a call to next(). An iterator for a list of length n has n+1 possible cursor positions, as illustrated by the carets (^) below:
+>                                  Element(0)   Element(1)   Element(2)   ... Element(n-1)
+>   cursor positions:  ^                   ^                   ^                    ^                          ^
+>
+> Note that the remove and set(Object) methods are not defined in terms of the cursor position; they are defined to operate on the last element returned by a call to next or previous().
+> This interface is a member of the Java Collections Framework.
+
+![image-20230817213450849](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F90849acadd56930bbca570b243c52168.png)
+
+### 1.2.2 List
+
+
+
+> An ordered collection (also known as a sequence). The user of this interface has precise control over where in the list each element is inserted. The user can access elements by their integer index (position in the list), and search for elements in the list.
+> Unlike sets, lists typically allow duplicate elements. More formally, lists typically allow pairs of elements e1 and e2 such that e1.equals(e2), and they typically allow multiple null elements if they allow null elements at all. It is not inconceivable that someone might wish to implement a list that prohibits duplicates, by throwing runtime exceptions when the user attempts to insert them, but we expect this usage to be rare.
+>
+> 一个有序的集合(也被称为顺序集合). 该接口的用户可以精确控制每个元素在列表中的插入位置. 用户可以根据整数索引(list中的位置)访问元素, 并且搜索list中的元素.   与set不同, list允许重复的元素. 更正式地说，列表通常允许成对的元素 e1 和 e2，即 e1.equals(e2)，如果允许空元素，则通常允许多个空元素.  不难想象, 有人可能希望一个list的实现杜绝重复情况, 当尝试插入重复元素抛出运行时异常,但是我们这样的使用情况是稀有的.
+>
+> The List interface places additional stipulations, beyond those specified in the Collection interface, on the contracts of the iterator, add, remove, equals, and hashCode methods. Declarations for other inherited methods are also included here for convenience.
+> The List interface provides four methods for positional (indexed) access to list elements. Lists (like Java arrays) are zero based. Note that these operations may execute in time proportional to the index value for some implementations (the LinkedList class, for example). Thus, iterating over the elements in a list is typically preferable to indexing through it if the caller does not know the implementation.
+>
+> 除了集合接口中的规定外，列表接口还对iterator, add, remove, equals, and hashCode方法的合约做出了额外的规定。为了方便,此接口中重新声明了其他继承的方法. List接口提供了四个索引访问list元素的方法. 需要注意的是这些方法可能执行非常耗时的来访问list中的元素(比如说LinkedList). 因此,如果调用者不知道是哪一种实现,相比于使用位置索引,在list中通过迭代器进行遍历更加的好.
+>
+> The List interface provides a special iterator, called a ListIterator, that allows element insertion and replacement, and bidirectional access in addition to the normal operations that the Iterator interface provides. A method is provided to obtain a list iterator that starts at a specified position in the list.
+>
+> List接口提供了一个特殊的迭代器, 命名为`ListIterator`, 相较于`Iterator `提供的常规的操作该迭代器运行元素插入以及替换, 双向移动(next与prev).
+>
+> The List interface provides two methods to search for a specified object. From a performance standpoint, these methods should be used with caution. In many implementations they will perform costly linear searches.
+>
+> List接口提供了两个方法来查找特殊的对象. 从性能的立场看, 这些方法需要谨慎的使用. 在多数的实现中,这些方法表现为耗时的线性查找. 
+>
+> The List interface provides two methods to efficiently insert and remove multiple elements at an arbitrary point in the list.
+> Note: While it is permissible for lists to contain themselves as elements, extreme caution is advised: the equals and hashCode methods are no longer well defined on such a list.
+>
+> List接口提供了两个方法用于高效的在list中的任意位置的插入和删除元素. 注意: 当list包含自己为元素成为可能, 强烈的建议equals 和 hashCode 方法已不再定义明确. 
+>
+> Some list implementations have restrictions on the elements that they may contain. For example, some implementations prohibit null elements, and some have restrictions on the types of their elements. Attempting to add an ineligible element throws an unchecked exception, typically NullPointerException or ClassCastException. Attempting to query the presence of an ineligible element may throw an exception, or it may simply return false; some implementations will exhibit the former behavior and some will exhibit the latter. More generally, attempting an operation on an ineligible element whose completion would not result in the insertion of an ineligible element into the list may throw an exception or it may succeed, at the option of the implementation. Such exceptions are marked as "optional" in the specification for this interface.
+>
+> 一些list的实现对于它们所包含的元素有着强烈的约束. 举个例子, 一些实现禁止null元素, 一些实现则对元素的type有较高的要求. 尝试插入一个不受支持的元素抛出`unchecked exception`通常为`NullPointerException`或者`ClassCastException`. 尝试查询一个不受支持的元素可能会抛出异常,或者简单的返回false. 一些实现展现第一种特性,一些则展现出另一种. 更一般地说，对不符合条件的元素进行操作时，如果操作完成后没有将不符合条件的元素插入到列表中，则可能会抛出异常，也可能会成功，由实现者自行决定。这种异常在本接口的规范中被标记为 "可选"。
+
+### 
+
+
+
 `List`继承了`Collection`接口
 
 ```java
@@ -369,3 +415,89 @@ public interface List<E> extends Collection<E> {
 List接口的方法结构
 
 ![image-20230817174831966](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/dfebfa1bb08f086a335714cca9e6421c.png)
+
+```java
+
+    int size();
+    boolean isEmpty();
+    boolean contains(Object o);
+    Iterator<E> iterator();
+    Object[] toArray();
+    <T> T[] toArray(T[] a);
+    boolean add(E e);
+    boolean remove(Object o);
+    boolean containsAll(Collection<?> c);
+    boolean addAll(Collection<? extends E> c);
+    boolean removeAll(Collection<?> c);
+    boolean retainAll(Collection<?> c);
+    void clear();
+    boolean equals(Object o);
+    int hashCode();
+```
+
+重写了`spliterator`方法(该方法是重写的Collection,而Collection重写的Interable)
+
+```java
+    @Override
+    default Spliterator<E> spliterator() {
+        return Spliterators.spliterator(this, Spliterator.ORDERED);
+    }
+```
+
+
+
+继承了Collection的五个方法(见上图),以及Iterable的一个方法`foreach`
+
+
+
+最后就是自定义了一些抽象方法,以及给出了两个default方法
+
+```java
+    default void replaceAll(UnaryOperator<E> operator) {
+        Objects.requireNonNull(operator);
+        final ListIterator<E> li = this.listIterator();
+        while (li.hasNext()) {
+            li.set(operator.apply(li.next()));
+        }
+    }
+    default void sort(Comparator<? super E> c) {
+        Object[] a = this.toArray();
+        Arrays.sort(a, (Comparator) c);
+        ListIterator<E> i = this.listIterator();
+        for (Object e : a) {
+            i.next();  //指向下一个
+            i.set((E) e); //设置值
+        }
+    }
+```
+
+
+
+剩下的方法则为定义的抽象方法
+
+```java
+
+    boolean addAll(int index, Collection<? extends E> c);
+  
+    E get(int index);
+    
+    E set(int index, E element);
+
+    void add(int index, E element);
+ 
+    E remove(int index);
+
+    int indexOf(Object o);
+
+    int lastIndexOf(Object o);
+
+    ListIterator<E> listIterator();
+    
+    ListIterator<E> listIterator(int index);
+
+   
+    List<E> subList(int fromIndex, int toIndex);
+
+
+```
+
