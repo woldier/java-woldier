@@ -1,10 +1,90 @@
-> # java集合类
+> # java 集合框架
 
 
 
 # 0.Preliminary
 
+java数据接口框架中有两个大哥分别是`Collection`和`Map`
+
 集合类继承了迭代器接口`Iterable<T>`,那么作为前置知识,我们必须要全面的了解该接口以及`Iterator<T>`类
+
+```java
+public interface Iterable<T> {
+    Iterator<T> iterator(); //抽象方法,需要实现,返回一个迭代器用于遍历(这是集合特有的)
+    
+    
+    default void forEach(Consumer<? super T> action) {  //默认方法,做foreach 其中使用了增强for,增强for底层实际就是迭代器
+        Objects.requireNonNull(action);
+        for (T t : this) {
+            action.accept(t);
+        }
+    }
+
+    default Spliterator<T> spliterator() {  //多线程分批遍历器
+        return Spliterators.spliteratorUnknownSize(iterator(), 0);
+    }
+}
+```
+
+
+
+```java
+public interface Iterator<E> {
+    boolean hasNext(); //当前指向的元素是否有值
+    E next(); //返回当前指针指向的元素,指针指向下一个
+    default void remove() { 
+        throw new UnsupportedOperationException("remove");
+    }
+    default void forEachRemaining(Consumer<? super E> action) {
+        Objects.requireNonNull(action);
+        while (hasNext())
+            action.accept(next());
+    }
+}
+```
+
+
+
+![图片1](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/1ec136274ed42a930b9db94ebb633c87.png)
+
+对于Iterator对象,初始时,指针指向集合中的第一个元素.
+
+`hasNext`会判断当前指针指向的位置是否有元素,如果有的话那么返回true,如果没有那么返回的是false.返回了false表明后面就没有元素了.
+
+需要注意的是,一个实例化的迭代器对象只能使用一次. 因为遍历完之后, 指针是指向最尾部的地方, 但是Iterator对象并没有提供指针重新指向起始的元素.所以没办法用该对象再次遍历,只能重新产生一个.
+
+`next`方法仅在调用过`hasNext`返回true后才能进行调用. `next`方法做的事情是返回当前指针指向的元素,然后指针移动,指向下一个.
+
+> removes from the underlying collection the last element returned by this iterator (optional operation). This method can be called only once per call to next. The behavior of an iterator is unspecified if the underlying collection is modified while the iteration is in progress in any way other than by calling this method.
+
+`remove`方法为默认方法,该方法仅在调用过`next`后才能进行调用(并且是可选项). 该方法的作用是将next返回的元素从集合中删除.
+
+示例如下:
+
+```java
+List<String> list = new ArrayList<>();
+//添加元素
+list.add("王1");
+list.add("李2");
+list.add("张3");
+
+Iterator<String> iter =  list.iterator();
+while(iter.hasNext){
+   
+       String elem = iter.next;
+    if( condition(elem) ){  //如果满足某种情况
+      	iter.remove(); //删除iter.next返回的元素
+       }
+    
+}
+
+```
+
+> Performs the given action for each remaining element until all elements have been processed or the action throws an exception. Actions are performed in the order of iteration, if that order is specified. Exceptions thrown by the action are relayed to the caller.
+
+`forEachRemaining`方法为默认方法, 对后续还没有遍历的元素做相同的操作,操作通过`Consumer<? super E> action`参数传递操作.
+
+
 
 # 1.Collection
 
@@ -99,7 +179,7 @@ public interface Collection<E> extends Iterable<E> {
         return removed;
     }
 
-@Override
+	@Override
     default Spliterator<E> spliterator() {  //重写Iterable接口的默认方法
         return Spliterators.spliterator(this, 0);
     }
@@ -124,3 +204,168 @@ public interface Collection<E> extends Iterable<E> {
 继承了来自于`Iterable<E>`
 
 ![image-20230816182642345](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230816182642345.png)
+
+
+
+## 1.1 AbstractCollection
+
+> This class provides a skeletal implementation of the Collection interface, to minimize the effort required to implement this interface.
+> To implement an unmodifiable collection, the programmer needs only to extend this class and provide implementations for the iterator and size methods. (The iterator returned by the iterator method must implement hasNext and next.)
+>
+> 本抽象类提供Collection接口实现的骨架, 来最小化实现Collection接口所需要的工作. 为了实现不可更改的集合, 编程人员只需要继承此抽象类并且提供迭代器`iterator `方法和`size`方法的实现.
+>
+> To implement a modifiable collection, the programmer must additionally override this class's add method (which otherwise throws an UnsupportedOperationException), and the iterator returned by the iterator method must additionally implement its remove method.
+> The programmer should generally provide a void (no argument) and Collection constructor, as per the recommendation in the Collection interface specification.
+>
+> 为了实现一个可修改的集合, 编程者必须额外的重写本抽象类的`add`方法(此方法在抽象类中抛出`UnsupportedOperationException`异常), 并且`iterator  `方法返回的迭代器对象必须额外的实现迭代器的`remove`方法. 编程者一般需要根据Collection接口中提出的建议, 提供空参(void)和有一个接受集合类型参数的构造器.
+>
+> The documentation for each non-abstract method in this class describes its implementation in detail. Each of these methods may be overridden if the collection being implemented admits a more efficient implementation.
+>
+> 该类中每个非抽象方法的文档都详细描述了其实现方法。如果要实现的集合需要更有效的实现方法，则可以重载这些方法。
+
+查看`AbstractCollection`抽象类的方法结构,其方法结构大部分来自于接口,自身拓展了两个方法.详细的接口见下图的描述.
+
+![image-20230817164701446](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/6237f1e2d5a7c25b8c1e4aa7307c428f.png)
+
+对于两个抽象方法没什么好说的,子类实现即可.
+
+```java
+    public abstract Iterator<E> iterator();
+
+    public abstract int size();
+```
+
+
+
+对于实现的`Collection`接口的方法除了`add(E e)`方法有点特殊之外,其他方法的实现基本上是基于迭代器(这里以`contains(Object o)`方法为例子)
+
+```java
+public boolean add(E e) {
+     throw new UnsupportedOperationException();
+}
+
+
+public boolean contains(Object o) {
+        Iterator<E> it = iterator();//创建一个迭代器
+        if (o==null) { //如果传入的o为nulll
+            while (it.hasNext())
+                if (it.next()==null)
+                    return true;
+        } else { //如果参数不为null
+            while (it.hasNext())
+                if (o.equals(it.next()))
+                    return true;
+        }
+        return false;
+    }
+```
+
+
+
+重写了Object的toString方法(底层仍然使用的是迭代器)
+
+```java
+   public String toString() {
+        Iterator<E> it = iterator();
+        if (! it.hasNext()) //如果没有元素
+            return "[]";
+
+        StringBuilder sb = new StringBuilder(); //创建一个String构造器
+        sb.append('['); //添加左括号
+        for (;;) {
+            E e = it.next();
+            sb.append(e == this ? "(this Collection)" : e);
+            if (! it.hasNext())
+                return sb.append(']').toString();
+            sb.append(',').append(' ');
+        }
+    }
+```
+
+
+
+自定义的静态方法,和属性值
+
+```java
+    /**
+     * The maximum size of array to allocate.
+     * Some VMs reserve some header words in an array.
+     * Attempts to allocate larger arrays may result in
+     * OutOfMemoryError: Requested array size exceeds VM limit
+     * 最大可以分配的数组大小. 一些VM保有一些header words在array中, 尝试分配更大一些的数组将会抛出异常.
+     */
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+
+    /**
+     * Reallocates the array being used within toArray when the iterator
+     * returned more elements than expected, and finishes filling it from
+     * the iterator.
+     * 当iterator返回了超过预期数量的元素,那么将重分配被toArray方法中使用的数组,并且完成从迭代器中返回数据填充新的数组.
+     * @param r the array, replete with previously stored elements 数组，其中包含先前存储的元素 
+     * @param it the in-progress iterator over this collection  之前遍历所使用的迭代器对象
+     * @return array containing the elements in the given array, plus any  
+     *         further elements returned by the iterator, trimmed to size
+     *         数组，其中包含给定数组中的元素，以及迭代器返回的其他元素，并按大小修剪
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> T[] finishToArray(T[] r, Iterator<?> it) {
+        int i = r.length; //得到之前数组的起始长度,或者说是指向尾部元素的指针
+        while (it.hasNext()) { //当迭代器中还有元素时
+            int cap = r.length; //复制一份数组当前的长度
+            if (i == cap) {  //如果尾部元素指针与当期的数组长度一致
+                int newCap = cap + (cap >> 1) + 1;  //cap进行扩展 cap = 1.5*cap +1
+                // overflow-conscious code
+                if (newCap - MAX_ARRAY_SIZE > 0)  //判断新的cap是否超过最大限制
+                    newCap = hugeCapacity(cap + 1); //超过时的处理
+                r = Arrays.copyOf(r, newCap);  //对System.arraycopy进行封装的方法,相当于返回了一个扩容后的数组
+            }
+            r[i++] = (T)it.next(); //做赋值
+        }
+        // trim if overallocated
+        return (i == r.length) ? r : Arrays.copyOf(r, i); //按大小做裁剪
+    }
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+            throw new OutOfMemoryError
+                ("Required array size too large");
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
+    }
+```
+
+
+
+上面的`finishToArray`方法是对于调用`toArray`的时候进行的额外处理,那么我们需要去看看
+
+```java
+    public Object[] toArray() {
+        // Estimate size of array; be prepared to see more or fewer elements
+        Object[] r = new Object[size()]; //生成一个结果集数组
+        Iterator<E> it = iterator(); //创建一个新的迭代器对象
+        for (int i = 0; i < r.length; i++) {
+            //能够进入for循环那么说明当前指针还没有指到之前保存的预测尾部
+            if (! it.hasNext()) // fewer elements than expected 说明当前集合中的元素个数减少了
+                return Arrays.copyOf(r, i); //按大小做裁剪
+            r[i] = it.next(); //做赋值
+        }
+        return it.hasNext() ? finishToArray(r, it) : r;  //判断是否发生了元素的添加,发生了添加it.hasNext()返回true进入finishToArray方法,否则直接返回.
+    }
+```
+
+
+
+## 1.2 List
+
+`List`继承了`Collection`接口
+
+```java
+public interface List<E> extends Collection<E> {
+    //..........................
+}
+```
+
+List接口的方法结构
+
+![image-20230817174831966](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/dfebfa1bb08f086a335714cca9e6421c.png)
