@@ -2,7 +2,7 @@
 
 
 
-# 0.Preliminary
+# 0. Preliminary
 
 java数据接口框架中有两个大哥分别是`Collection`和`Map`
 
@@ -86,7 +86,7 @@ while(iter.hasNext){
 
 
 
-# 1.Collection
+# 1. Collection
 
 写在前面 为什么Java中的Collection类都继承了抽象类还要实现抽象类的接口？
 
@@ -500,4 +500,412 @@ List接口的方法结构
 
 
 ```
+
+
+
+### 1.2.3 AbstractList
+
+> This class provides a skeletal implementation of the List interface to minimize the effort required to implement this interface backed by a "random access" data store (such as an array). For sequential access data (such as a linked list), AbstractSequentialList should be used in preference to this class.
+>
+> 本抽象类提供了实现List接口的骨架, 最小化了支持随机存取数据存储(如数组)的情况下实现List接口需要做的努力.  对于顺序访问的数据(比如说链表), 应该优先使用  `AbstractSequentialList `而非此类. 
+>
+> To implement an unmodifiable list, the programmer needs only to extend this class and provide implementations for the get(int) and size() methods.
+>
+> 为了实现一个不可修改的list, 编程者只需要继承此类,并且提供`get(int)` 和`size() `方法的实现即可.
+>
+> To implement a modifiable list, the programmer must additionally override the set(int, E) method (which otherwise throws an UnsupportedOperationException). If the list is variable-size the programmer must additionally override the add(int, E) and remove(int) methods.
+>
+> 为了实现一个可修改的数组, 编程者需要二外的重写`set(int, E)`方法(否则的话该方法抛出 `UnsupportedOperationException` 异常). 如果该list是一个可变大小的数组, 那么需要额外的实现`add(int, E)`和`remove(int)`方法
+>
+> The programmer should generally provide a void (no argument) and collection constructor, as per the recommendation in the Collection interface specification.
+>
+> 编程者根据Collection中提出的建议, 通常需要提供一个空参的构造方法以及一个可以接口Collection类型参数的构造方法, 
+>
+> Unlike the other abstract collection implementations, the programmer does not have to provide an iterator implementation; the iterator and list iterator are implemented by this class, on top of the "random access" methods: get(int), set(int, E), add(int, E) and remove(int).
+>
+> 不像其它的集合的实现, 编程者无需提供迭代器的实现;基于"随机访问"的方法 `get(int), set(int, E), add(int, E) and remove(int)`   `iterator `和`list iterator`已经被本类实现, 
+>
+> The documentation for each non-abstract method in this class describes its implementation in detail. Each of these methods may be overridden if the collection being implemented admits a more efficient implementation.
+>
+> 
+
+AbstractList的结构相较于前面的类更加的复杂,因此本小结准备一点一点的介绍
+
+先给个总体的图
+
+![image-20230818105818230](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230818105818230.png)
+
+
+
+- Itr类(`AbstractList`的内部类是迭代器的实现类(与前面匿名内部类的方式不同))
+
+> 这里有一个小细节是这个类是私有的且没有加static
+>
+> 这样new出来的Itr对象是直接与创建的`AbstractList`实现类的对象关联的. 可以访问实现类对象中的方法.
+>
+> 这也是生成的Itr对象能够遍历对应的list的原因.(注:ReentrantLock中的ConditionObject对象也是这样工作的)
+>
+> 关于更详细的解释以及使用可以参考博客:
+>
+> https://blog.csdn.net/jianghuafeng0/article/details/109194468
+>
+> https://zhuanlan.zhihu.com/p/61735448
+
+![image-20230818111925614](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/1dd7d97a47b17bfbe9b036fce71203a2.png)
+
+```java
+private class Itr implements Iterator<E> {
+        /**
+         * Index of element to be returned by subsequent call to next.
+         * 后续调用next方法将会返回的元素的索引值
+         */
+        int cursor = 0;  //指针
+
+        /**
+         * Index of element returned by most recent call to next or
+         * previous.  Reset to -1 if this element is deleted by a call
+         * to remove.
+         * 最近调用next而被返回的元素的索引值
+         */
+        int lastRet = -1;   
+
+        /**
+         * The modCount value that the iterator believes that the backing
+         * List should have.  If this expectation is violated, the iterator
+         * has detected concurrent modification.
+         * 迭代器认为与其绑定的List应该具有的modCount值. 如果期望值是`violated`那么迭代器可以检测到并发修改
+         */
+        int expectedModCount = modCount;
+
+        public boolean hasNext() {  //hasNext方法
+            return cursor != size(); //比较当前的游标是否大于list的size 参见0.Preliminary中的图
+        }
+
+        public E next() {
+            checkForComodification();  //检查是否被并发修改
+            try {
+                int i = cursor;  //暂存游标值
+                E next = get(i);  //访问对应元素
+                lastRet = i;  // 最近返回指针指向当前游标
+                cursor = i + 1;  //游标加1
+                return next; //返回暂存的元素
+            } catch (IndexOutOfBoundsException e) { //检测按照索引get元素出错
+                checkForComodification(); //检查是否是被修正了
+                throw new NoSuchElementException();  //
+            }
+        }
+
+        public void remove() {
+            if (lastRet < 0)  //如果最后访问的索引为-1则 抛出异常(还有就是控制每次一调用next后只能调用remove成功一次)
+                throw new IllegalStateException();
+            checkForComodification();  //检查并发修改
+
+            try {
+                AbstractList.this.remove(lastRet); //删除,modified会变化
+                if (lastRet < cursor) //如果lastRet < cursor说明是调用的next,lastRet = cursor否则表明调用的是previous
+                    cursor--; 
+                lastRet = -1; //设置lastRet为-1防止再次调用
+                expectedModCount = modCount;  //更新保存的预期modCount
+            } catch (IndexOutOfBoundsException e) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        final void checkForComodification() {
+            if (modCount != expectedModCount)  //检查值是否相等
+                throw new ConcurrentModificationException();  //抛出并发修改异常
+        }
+    }
+```
+
+- ListItr
+
+![image-20230818134533107](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/d54cd4f64db5243199990277bbffc600.png)
+
+```java
+ private class ListItr extends Itr implements ListIterator<E> {
+        ListItr(int index) {  //构造函数,传入当前的游标值
+            cursor = index;
+        }
+
+        public boolean hasPrevious() {
+            return cursor != 0; //判断当前游标是否为0,为0则没有previous了
+        }
+
+        public E previous() {
+            checkForComodification();  //检查修改
+            try {
+                int i = cursor - 1; //游标减一,并且拷贝一份到i中
+                E previous = get(i); //获取i索引对应的元素
+                lastRet = cursor = i; //最近返回的对象指针lastRet指向i
+                return previous;
+            } catch (IndexOutOfBoundsException e) { //抛出异常
+                checkForComodification(); //检查是否是因为修改造成的
+                throw new NoSuchElementException(); 
+            }
+        }
+
+        public int nextIndex() { //返回next指针
+            return cursor;
+        }
+
+        public int previousIndex() { //返回prev指针
+            return cursor-1;
+        }
+
+        public void set(E e) { //修改元素
+            if (lastRet < 0) //如果lastRet = -1 那么说明刚做过set,或者是remove操作,那么不允许再调用set
+                throw new IllegalStateException();
+            checkForComodification(); 
+
+            try {
+                AbstractList.this.set(lastRet, e);//设置对应索引的新值
+                expectedModCount = modCount;//重写得到期望modCount
+            } catch (IndexOutOfBoundsException ex) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        public void add(E e) { //
+            checkForComodification();
+
+            try {
+                int i = cursor;
+                AbstractList.this.add(i, e);
+                lastRet = -1;
+                cursor = i + 1;
+                expectedModCount = modCount;
+            } catch (IndexOutOfBoundsException ex) {
+                throw new ConcurrentModificationException();
+            }
+        }
+    }
+```
+
+- 实现的List的方法
+
+![image-20230818154207977](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/162215b0474f65a7051fbd3e6372b917.png)
+
+```java
+	/**
+     * Appends the specified element to the end of this list (optional
+     * operation). 添加一个元素到list的末尾
+     *
+     * <p>Lists that support this operation may place limitations on what
+     * elements may be added to this list.  In particular, some
+     * lists will refuse to add null elements, and others will impose
+     * restrictions on the type of elements that may be added.  List
+     * classes should clearly specify in their documentation any restrictions
+     * on what elements may be added.
+     * 支持本操作的list对插入的元素会有限制. 特别的, 一些list会拒绝添加null元素, 一些则对添加元素的类型做了要      * 求. List实现类需要清晰明白的注明插入元素的限制.
+     * <p>This implementation calls {@code add(size(), e)}. 
+     * 本方法调用 add(size(), e) 方法
+     * <p>Note that this implementation throws an 
+     * {@code UnsupportedOperationException} unless
+     * {@link #add(int, Object) add(int, E)} is overridden.
+     * 需要注意本方法会抛出 {@code UnsupportedOperationException} 除非{@link #add(int, Object) add(int, E)} 方法被重写
+     * @param e element to be appended to this list 即将插入到list中元素
+     * @return {@code true} (as specified by {@link Collection#add}) 返回值的含义参考Collection的说明
+     * @throws UnsupportedOperationException if the {@code add} operation
+     *         is not supported by this list 如果add方法不被实现类支持
+     * @throws ClassCastException if the class of the specified element
+     *         prevents it from being added to this list  指定的元素类型不支持被插入到此list中
+     * @throws NullPointerException if the specified element is null and this
+     *         list does not permit null elements 插入的元素为null,并且list不支持null元素
+     * @throws IllegalArgumentException if some property of this element
+     *         prevents it from being added to this list 如果该元素的某些属性阻止它被添加到该列表中 
+     */
+    public boolean add(E e) {
+        add(size(), e);
+        return true;
+    }
+
+
+    /**
+     * Inserts the specified element at the specified position in this list (optional operation). 
+     * Shifts the element currently at that position (if any) and any subsequent elements to the 
+     * right (adds one to their indices).
+     * 取代特定位置处的元素
+     * <p>This implementation always throws an 本实现总是抛出UnsupportedOperationException
+     * {@code UnsupportedOperationException}.
+     *
+     * @throws UnsupportedOperationException  如果set操作不被类支持
+     * @throws ClassCastException            {@inheritDoc} 当前元素不支持插入到list中
+     * @throws NullPointerException          {@inheritDoc} 不支持null元素
+     * @throws IllegalArgumentException      {@inheritDoc} 元素的某些属性使得其不被支持插入到list中
+     * @throws IndexOutOfBoundsException     {@inheritDoc} 索引越界
+     */
+    public E set(int index, E element) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+	 *在list长得特定位置插入元素. 滑动当前位置的元素以及右侧(索引值更大)的元素(如果有的话).
+     */
+    public void add(int index, E element) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+	 *删除特定位置插入元素. 滑动右侧(索引值更大)的元素(如果有的话).
+     */
+ 	public E remove(int index) {
+        throw new UnsupportedOperationException();
+    }
+    /**
+	 * 返回list中第一个出现的特定值的元素, 或者如果是不存在则返回-1.
+	 * 更进一步说返回满足条件(o==null ? get(i)==null : o.equals(get(i)))的最小的索引值
+	 * 如果不存在则返回-1
+     */
+ 	public int indexOf(Object o) {
+        ListIterator<E> it = listIterator();  //得到一个ListIterator
+        if (o==null) {
+            while (it.hasNext())
+                if (it.next()==null)
+                    return it.previousIndex();
+        } else {
+            while (it.hasNext())
+                if (o.equals(it.next()))
+                    return it.previousIndex();
+        }
+        return -1;
+    }
+
+    /**
+     * 返回list中第最后出现的特定值的元素, 或者如果是不存在则返回-1.
+     * 更进一步说返回满足条件(o==null ? get(i)==null : o.equals(get(i)))的最大的索引值
+     * 如果不存在则返回-1
+     */
+    public int lastIndexOf(Object o) {
+        ListIterator<E> it = listIterator(size());  //初始化一个游标指向末尾的迭代器
+        if (o==null) { //允许空元素的遍历
+            while (it.hasPrevious()) //如果还有前驱
+                if (it.previous()==null) //得到前驱,判断是非为null
+                    return it.nextIndex(); //if成立,找到元素
+        } else { //对于非空元素的遍历
+            while (it.hasPrevious())
+                if (o.equals(it.previous())) //判断相等
+                    return it.nextIndex();
+        }
+        return -1;
+    }
+
+    public void clear() {
+        removeRange(0, size());
+    }
+	
+   /**
+     * 将所有集合中的元素添加到list中,滑动当前位置的元素以及右侧(索引值更大)的元素(如果有的话).
+     * 新元素出现的顺序与Collection返回的迭代器遍历得到元素的顺序是一致的.
+     * 如果指定的集合在操作过程中被修改，该操作的行为将是未定义的。(请注意，如果指定的集合是此列表且非空，则会出现这种情况）。
+     */
+    public boolean addAll(int index, Collection<? extends E> c) {
+        rangeCheckForAdd(index); //检擦index的合法性
+        boolean modified = false;  // 修改tag
+        for (E e : c) {  //遍历c中的元素 (增强for,底层任然是遍历器)
+            add(index++, e);   
+            modified = true;
+        }
+        return modified;
+    }
+
+
+   public Iterator<E> iterator() { //返回一个迭代器对象
+        return new Itr();
+    }
+
+    public ListIterator<E> listIterator() { //返回一个list迭代器对象,默认游标为0
+        return listIterator(0);
+    }
+
+    public ListIterator<E> listIterator(final int index) { //返回一个list迭代器对象, 指定
+        rangeCheckForAdd(index);
+
+        return new ListItr(index);
+    }
+
+
+   public List<E> subList(int fromIndex, int toIndex) { //返回子list 
+        return (this instanceof RandomAccess ?
+                new RandomAccessSubList<>(this, fromIndex, toIndex) :
+                new SubList<>(this, fromIndex, toIndex));
+    }
+```
+
+
+
+- 重定义的List中的抽象方法
+
+![image-20230818171053964](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/6eeb6f225d034be83efc2a8e5184487a.png)
+
+```java
+    /**
+     * Returns the element at the specified position in this list.
+     *
+     * @throws IndexOutOfBoundsException if the index is out of range (index < 0 || index >= size())
+     */
+    abstract public E get(int index);
+```
+
+- 实现List,Collection中的equals和hashCode方法
+
+```java
+
+    /**
+     * Compares the specified object with this list for equality.  Returns
+     * {@code true} if and only if the specified object is also a list, both
+     * lists have the same size, and all corresponding pairs of elements in
+     * the two lists are <i>equal</i>.  (Two elements {@code e1} and
+     * {@code e2} are <i>equal</i> if {@code (e1==null ? e2==null :
+     * e1.equals(e2))}.)  In other words, two lists are defined to be
+     * equal if they contain the same elements in the same order.<p>
+     * 比较一个特定的对象与本list的等价性. 当且仅当待比较的object是list的时候,与本list有相同的size,
+     * 并且对应的元素页相等时才返回true. 
+     * This implementation first checks if the specified object is this
+     * list. If so, it returns {@code true}; if not, it checks if the
+     * specified object is a list. If not, it returns {@code false}; if so,
+     * it iterates over both lists, comparing corresponding pairs of elements.
+     * If any comparison returns {@code false}, this method returns
+     * {@code false}.  If either iterator runs out of elements before the
+     * other it returns {@code false} (as the lists are of unequal length);
+     * otherwise it returns {@code true} when the iterations complete.
+     *
+     * @param o the object to be compared for equality with this list
+     * @return {@code true} if the specified object is equal to this list
+     */
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+        if (!(o instanceof List))
+            return false;
+
+        ListIterator<E> e1 = listIterator();
+        ListIterator<?> e2 = ((List<?>) o).listIterator();
+        while (e1.hasNext() && e2.hasNext()) {
+            E o1 = e1.next();
+            Object o2 = e2.next();
+            if (!(o1==null ? o2==null : o1.equals(o2)))
+                return false;
+        }
+        return !(e1.hasNext() || e2.hasNext());
+    }
+
+    /**
+     * Returns the hash code value for this list.
+     * 
+     * <p>This implementation uses exactly the code that is used to define the
+     * list hash function in the documentation for the {@link List#hashCode}
+     * method.
+     *
+     * @return the hash code value for this list
+     */
+    public int hashCode() {
+        int hashCode = 1;
+        for (E e : this)
+            hashCode = 31*hashCode + (e==null ? 0 : e.hashCode());
+        return hashCode;
+    }
+```
+
+
 
