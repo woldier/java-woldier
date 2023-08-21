@@ -537,7 +537,9 @@ AbstractList的结构相较于前面的类更加的复杂,因此本小结准备�
 
 
 
-- Itr类(`AbstractList`的内部类是迭代器的实现类(与前面匿名内部类的方式不同))
+#### 1.2.3.1 Itr类
+
+>   # AbstractList的内部类是迭代器的实现类(与前面匿名内部类的方式不同)
 
 > 这里有一个小细节是这个类是私有的且没有加static
 >
@@ -618,7 +620,7 @@ private class Itr implements Iterator<E> {
     }
 ```
 
-- ListItr
+#### 1.2.3.2 ListItr
 
 ![image-20230818134533107](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/d54cd4f64db5243199990277bbffc600.png)
 
@@ -682,7 +684,9 @@ private class Itr implements Iterator<E> {
     }
 ```
 
-- 实现的List的方法
+#### 1.2.3.3 实现的List的方法
+
+> 其中的 add,clear,iterator 方法也是重写的父类AbstractCollection中的方法
 
 ![image-20230818154207977](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/162215b0474f65a7051fbd3e6372b917.png)
 
@@ -755,21 +759,21 @@ private class Itr implements Iterator<E> {
     /**
 	 * 返回list中第一个出现的特定值的元素, 或者如果是不存在则返回-1.
 	 * 更进一步说返回满足条件(o==null ? get(i)==null : o.equals(get(i)))的最小的索引值
-	 * 如果不存在则返回-1
-     */
- 	public int indexOf(Object o) {
+        * 如果不存在则返回-1
+        */
+public int indexOf(Object o) {
         ListIterator<E> it = listIterator();  //得到一个ListIterator
         if (o==null) {
-            while (it.hasNext())
-                if (it.next()==null)
-                    return it.previousIndex();
+        while (it.hasNext())
+        if (it.next()==null)
+        return it.previousIndex();
         } else {
-            while (it.hasNext())
-                if (o.equals(it.next()))
-                    return it.previousIndex();
+        while (it.hasNext())
+        if (o.equals(it.next()))
+        return it.previousIndex();
         }
         return -1;
-    }
+        }
 
     /**
      * 返回list中第最后出现的特定值的元素, 或者如果是不存在则返回-1.
@@ -834,7 +838,7 @@ private class Itr implements Iterator<E> {
 
 
 
-- 重定义的List中的抽象方法
+#### 1.2.3.4 重定义的List中的抽象方法
 
 ![image-20230818171053964](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/6eeb6f225d034be83efc2a8e5184487a.png)
 
@@ -847,7 +851,7 @@ private class Itr implements Iterator<E> {
     abstract public E get(int index);
 ```
 
-- 实现List,Collection中的equals和hashCode方法
+#### 1.2.3.5 实现List,Collection中的equals和hashCode方法(同时也重写了AbstractCollection中的方法)
 
 ```java
 
@@ -861,6 +865,8 @@ private class Itr implements Iterator<E> {
      * equal if they contain the same elements in the same order.<p>
      * 比较一个特定的对象与本list的等价性. 当且仅当待比较的object是list的时候,与本list有相同的size,
      * 并且对应的元素页相等时才返回true. 
+     * 换句话说, 两个list被定义为相等,当且仅当他们包含相同的元素,且顺序相同
+     * 
      * This implementation first checks if the specified object is this
      * list. If so, it returns {@code true}; if not, it checks if the
      * specified object is a list. If not, it returns {@code false}; if so,
@@ -869,19 +875,22 @@ private class Itr implements Iterator<E> {
      * {@code false}.  If either iterator runs out of elements before the
      * other it returns {@code false} (as the lists are of unequal length);
      * otherwise it returns {@code true} when the iterations complete.
-     *
+     * 本实现首先检查待比较的对象是不是本list, 如果是那么返回true,如果不是那么检查该对象的类型是不是list
+     * ,如果不是则返回false. 如果是, 那么遍历本list与目标list, 比较相应的迭代元素. 如果任意一次比较返回了
+     * false, 那么方法返回fasle. 如果任意一个迭代器提前结束了(说明长度不等)任然返回false. 否则说明两个list
+     * 的元素是相同的, 返回true. 
      * @param o the object to be compared for equality with this list
      * @return {@code true} if the specified object is equal to this list
      */
     public boolean equals(Object o) {
-        if (o == this)
+        if (o == this) //判断代比较对象是否指向的是自己
             return true;
-        if (!(o instanceof List))
+        if (!(o instanceof List)) //判断是否是list
             return false;
 
-        ListIterator<E> e1 = listIterator();
-        ListIterator<?> e2 = ((List<?>) o).listIterator();
-        while (e1.hasNext() && e2.hasNext()) {
+        ListIterator<E> e1 = listIterator(); //获取本对象的迭代器
+        ListIterator<?> e2 = ((List<?>) o).listIterator(); //获取待比较对象的迭代器
+        while (e1.hasNext() && e2.hasNext()) {  //循环遍历
             E o1 = e1.next();
             Object o2 = e2.next();
             if (!(o1==null ? o2==null : o1.equals(o2)))
@@ -907,5 +916,218 @@ private class Itr implements Iterator<E> {
     }
 ```
 
+```java
+hashCode = 31*hashCode + (e==null ? 0 : e.hashCode());
+//其实也等同于
+hashCode = ( hashCode<<5 )-hashCode + (e==null ? 0 : e.hashCode());
+```
 
+
+
+#### 1.2.3.6 继承的AbstractCollection的方法
+
+![image-20230821105044616](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/ef6f9979af86270a22bcdd98784fd4fa.png)
+
+#### 1.2.3.7 继承的Collection的方法
+
+![image-20230821110114597](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/20319dbacfaa5e4f81acfb3ac24d7220.png)
+
+#### 1.2.3.8 继承的 List的方法
+
+![image-20230821111005539](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/6a925d7cdfddea51bab3fc8a148e0bdb.png)
+
+#### 1.2.3.9 自己拓展的方法
+
+![image-20230821113340012](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/ac8cc11e8175f963d4e7dbac5033d564.png)
+
+
+
+```java
+     /**
+     * Removes from this list all of the elements whose index is between
+     * {@code fromIndex}, inclusive, and {@code toIndex}, exclusive.
+     * Shifts any succeeding elements to the left (reduces their index).
+     * This call shortens the list by {@code (toIndex - fromIndex)} elements.
+     * (If {@code toIndex==fromIndex}, this operation has no effect.)
+     * 删除list中索引下标在区间[fromIndex,toIndex)左闭右开的元素. 移动所有右侧的后续节点.
+     * 本方法调用使得list的长度消减,特别注意当toIndex==fromIndex时,不会对list产生任何的影响
+     * <p>This method is called by the {@code clear} operation on this list
+     * and its subLists.  Overriding this method to take advantage of
+     * the internals of the list implementation can <i>substantially</i>
+     * improve the performance of the {@code clear} operation on this list
+     * and its subLists.
+     * 本方法被list及其子list的clear方法调用. 可以基于实现的类型(如数组,或者链表)
+     * 重写此方法将会提供更好的性能. 
+     * <p>This implementation gets a list iterator positioned before
+     * {@code fromIndex}, and repeatedly calls {@code ListIterator.next}
+     * followed by {@code ListIterator.remove} until the entire range has
+     * been removed.  <b>Note: if {@code ListIterator.remove} requires linear
+     * time, this implementation requires quadratic time.</b>
+     * 本方法的算法流程时先初始化一个ListIterator(设置游标位置为fromIndex).
+     * 随后重复的调用ListIterator.next和ListIterator.remove直到待删除
+     * @param fromIndex index of first element to be removed
+     * @param toIndex index after last element to be removed
+     */
+    protected void removeRange(int fromIndex, int toIndex) {
+        ListIterator<E> it = listIterator(fromIndex);
+        for (int i=0, n=toIndex-fromIndex; i<n; i++) {
+            it.next();
+            it.remove();
+        }
+    }
+
+
+
+    private void rangeCheckForAdd(int index) {
+        if (index < 0 || index > size()) //判断size是否合法
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+    }
+
+	 private String outOfBoundsMsg(int index) { //组装打印消息的方法
+        return "Index: "+index+", Size: "+size();
+    }
+
+```
+
+
+
+#### 1.2.3.10 外部类SubList
+
+```java
+class SubList<E> extends AbstractList<E> {
+    private final AbstractList<E> l;
+    private final int offset;
+    private int size;
+    //.....................
+    
+```
+
+该类使用了装饰器模式,它可以感知到l的变化,对本类操作相当于对list操作.
+
+可以看一下它listIterator的源码
+
+它拿到了成员变量`l`的迭代器,然后对迭代过程做了一些限制
+
+```java
+    public ListIterator<E> listIterator(final int index) {
+        checkForComodification();//检查是否出现过modify
+        rangeCheckForAdd(index);//检查索引的合法性
+
+        return new ListIterator<E>() {
+            private final ListIterator<E> i = l.listIterator(index+offset); //拿到成员变量l的迭代器
+
+            public boolean hasNext() {  //检查是否还有下一个元素
+                return nextIndex() < size;
+            }
+
+            public E next() {
+                if (hasNext())
+                    return i.next();
+                else
+                    throw new NoSuchElementException();
+            }
+
+            public boolean hasPrevious() {
+                return previousIndex() >= 0;
+            }
+
+            public E previous() {
+                if (hasPrevious())
+                    return i.previous();
+                else
+                    throw new NoSuchElementException();
+            }
+
+            public int nextIndex() {
+                return i.nextIndex() - offset;
+            }
+
+            public int previousIndex() {
+                return i.previousIndex() - offset;
+            }
+
+            public void remove() {
+                i.remove();
+                SubList.this.modCount = l.modCount;
+                size--;
+            }
+
+            public void set(E e) {
+                i.set(e);
+            }
+
+            public void add(E e) {
+                i.add(e);
+                SubList.this.modCount = l.modCount;
+                size++;
+            }
+        };
+    }
+```
+
+
+
+#### 1.2.3.11 外部类RandomAccessSubList 
+
+与`SubList`唯一的区别是继承了RandomAccess,其他没有任何区别
+
+```java
+class RandomAccessSubList<E> extends SubList<E> implements RandomAccess {
+    RandomAccessSubList(AbstractList<E> list, int fromIndex, int toIndex) {
+        super(list, fromIndex, toIndex);
+    }
+
+    public List<E> subList(int fromIndex, int toIndex) {
+        return new RandomAccessSubList<>(this, fromIndex, toIndex);
+    }
+}
+
+```
+
+
+
+### 1.2.4 ArrayList
+
+> Resizable-array implementation of the List interface. Implements all optional list operations, and permits all elements, including null. In addition to implementing the List interface, this class provides methods to manipulate the size of the array that is used internally to store the list. (This class is roughly equivalent to Vector, except that it is unsynchronized.)
+>
+> 可变大小的List接口实现. 实现了所有可选的list操作, 并且允许所有元素(包括null). 除了实现了List接口, 本类提供了维护内部用于list数组大小的方法. (本类基本上与`Vector.class`相同, 除了本类是线程不安全的)
+>
+> The size, isEmpty, get, set, iterator, and listIterator operations run in constant time. The add operation runs in amortized constant time, that is, adding n elements requires O(n) time. All of the other operations run in linear time (roughly speaking). The constant factor is low compared to that for the LinkedList implementation.
+>
+> `size`,`isEmpty`, `get`, `set`, `iterator,` and `listIterator`方法运行的时间是常量时间. `add`操作以摊销后的恒定时间运行，即添加 n 个元素需要 O(n) 时间. 所有的其他操作运行时间是线性的(大体上讲). 常量因子相较于LinkedList的实现是非常小的.
+>
+> Each ArrayList instance has a capacity. The capacity is the size of the array used to store the elements in the list. It is always at least as large as the list size. As elements are added to an ArrayList, its capacity grows automatically. The details of the growth policy are not specified beyond the fact that adding an element has constant amortized time cost.
+>
+> 每个ArrayList实例都有一个容量(capacity). 容量指的是List中用于存储元素的数组的长度. 其总是比list的当前大小大. 当元素被添加到一个ArrayList. 数组的容量发生动态的增长. 除了增加一个元素的摊销时间成本不变之外，对动态扩容的策略实现细节没有明确规定。
+>
+> An application can increase the capacity of an ArrayList instance before adding a large number of elements using the ensureCapacity operation. This may reduce the amount of incremental reallocation.
+>
+> 一个应用可以在添加一个大规模的元素之前使用`ensureCapacity `操作对ArrayList的容量进行扩容. 这或许可以减少重复调用扩容方法的次数.
+>
+> Note that this implementation is not synchronized. If multiple threads access an ArrayList instance concurrently, and at least one of the threads modifies the list structurally, it must be synchronized externally. (A structural modification is any operation that adds or deletes one or more elements, or explicitly resizes the backing array; merely setting the value of an element is not a structural modification.) This is typically accomplished by synchronizing on some object that naturally encapsulates the list. If no such object exists, the list should be "wrapped" using the Collections.synchronizedList method. This is best done at creation time, to prevent accidental unsynchronized access to the list:
+>
+> ​    List list = Collections.synchronizedList(new ArrayList(...));
+>
+> 需要注意的是本实现是线程不安全的. 如果ArrayList 实例被多个线程并发的访问, 并且至少有一个线程在对list的结构做修改, 那么则必须在外部保证`synchronized ` (结构修改指的是任何添加或者删除一个或者多个元素的操作, 或者更详细的说变更内部的数组; 稀有的设置元素的值不是结构的修改). 这通常是通过某个对象对象封装本list完成了. 如果没有这样的对象的存在话, 数组需要通过`Collections.synchronizedList` 方法来进行"包裹". 
+>
+> This is best done at creation time, to prevent accidental unsynchronized access to the list:
+>
+> ​    List list = Collections.synchronizedList(new ArrayList(...));
+>
+> The iterators returned by this class's iterator and listIterator methods are fail-fast: if the list is structurally modified at any time after the iterator is created, in any way except through the iterator's own remove or add methods, the iterator will throw a ConcurrentModificationException. Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
+>
+> 本类 iterator ` 和`listIterator`方法返回的迭代器是有快速失败机制二点: 如果说迭代器被创建后, list的结构在任何时刻被被修正了(除了是在迭代器内部调用了remove或者add方法),那么迭代器将会抛出`ConcurrentModificationException`. 因此, 面临并发修改的时候, 迭代器干净利落的失败,而不是冒着在未来某个不确定的时间发生任意, 非确定行为的风险.  
+>
+> Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
+>
+> 总的来说, 需要注意迭代器的`fail-fast`行为不能确保无故障行为. 因为一般来说, 在非同步并发修改的情况下, 不可能做任何的硬性保护. `fail-fast`代器会尽力抛出 ConcurrentModificationException 异常。因此，如果程序的正确性依赖于该异常，那将是错误的：迭代器的`fail-fast`行为只能用于检测错误。
+
+
+
+```java
+public class ArrayList<E> extends AbstractList<E>
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
+{
+    //............................................
+```
 

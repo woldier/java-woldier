@@ -1,4 +1,6 @@
 > 一致性hash
+> 
+> java支持的hash算法参考 https://docs.oracle.com/en/java/javase/14/docs/specs/security/standard-names.html#messagedigest-algorithms
 
 # 1.preliminary
 
