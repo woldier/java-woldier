@@ -1131,3 +1131,189 @@ public class ArrayList<E> extends AbstractList<E>
     //............................................
 ```
 
+
+
+#### 1.2.4.1 Itr类
+
+ArrayList内部定义了一个Iter类(需要使用此内部类,那么必定要重写父类的`iterator`和`listIterator`方法)
+
+![image-20230821202540590](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2Fb05b003dbf1051b55a88a599f5c04b50.png)
+
+由于ArrayList实现的遍历器需要访问内部维护的`elementData`变量,因此这里先介绍了下ArrayList里面有的变量
+
+```java
+	private static final long serialVersionUID = 8683452581122892189L; //序列化id
+
+    /**
+     * Default initial capacity.
+     */
+    private static final int DEFAULT_CAPACITY = 10; //默认的容量
+
+    /**
+     * Shared empty array instance used for empty instances.
+     */
+    private static final Object[] EMPTY_ELEMENTDATA = {}; //空的elemdata,所有空的ArrayList公用一个
+
+    /**
+     * Shared empty array instance used for default sized empty instances. We
+     * distinguish this from EMPTY_ELEMENTDATA to know how much to inflate when
+     * first element is added.
+     */
+    private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {}; //也是空的数组,不过该数组是使用默认size分配的,这样做是为了分辨初始size
+
+    /**
+     * The array buffer into which the elements of the ArrayList are stored.
+     * The capacity of the ArrayList is the length of this array buffer. Any
+     * empty ArrayList with elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA
+     * will be expanded to DEFAULT_CAPACITY when the first element is added.
+     */
+    transient Object[] elementData; // non-private to simplify nested class access
+
+    /**
+     * The size of the ArrayList (the number of elements it contains).
+     *
+     * @serial
+     */
+    private int size;
+```
+
+
+
+接下来看一下Itr源码, 其实大体上与AbstractList源码差不多的,唯一的差别是AbstractList用的是get(i)获取对应位置的元素,而ArrayList中是直接拿到elementData的引用. 
+
+除此之外,还重写了`forEachRemaining`方法.
+
+```java
+private class Itr implements Iterator<E> {
+        int cursor;       // index of next element to return
+        int lastRet = -1; // index of last element returned; -1 if no such
+        int expectedModCount = modCount;  
+
+        Itr() {}
+
+        public boolean hasNext() {
+            return cursor != size;  //比较游标是否等于size判断越界
+        }
+
+        @SuppressWarnings("unchecked")
+        public E next() {
+            checkForComodification();
+            int i = cursor;  // 保存当前游标
+            if (i >= size)  // 如果i比size打 那么说明超出
+                throw new NoSuchElementException();
+            Object[] elementData = ArrayList.this.elementData;  //保存ArrayList中数组的引用
+            if (i >= elementData.length)  //判断异常
+                throw new ConcurrentModificationException();
+            cursor = i + 1; //游标加一
+            return (E) elementData[lastRet = i]; // 返回对应位置元素
+        }
+
+        public void remove() {
+            if (lastRet < 0)  //如果lastRet小于零那么说明可能是刚刚初始化,都没调用过next;或者说已经调用了remove了,那么不允许重复调用
+                throw new IllegalStateException();
+            checkForComodification(); //检查并发修改
+
+            try {
+                ArrayList.this.remove(lastRet);  //删除元素
+                cursor = lastRet;  //游标移动
+                lastRet = -1; //重设lastRet
+                expectedModCount = modCount; //重新设置expectedModCount
+            } catch (IndexOutOfBoundsException ex) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public void forEachRemaining(Consumer<? super E> consumer) {
+            Objects.requireNonNull(consumer);
+            final int size = ArrayList.this.size;
+            int i = cursor; //保存当前游标
+            if (i >= size) {
+                return;
+            }
+            final Object[] elementData = ArrayList.this.elementData;
+            if (i >= elementData.length) {
+                throw new ConcurrentModificationException();
+            }
+            while (i != size && modCount == expectedModCount) {
+                consumer.accept((E) elementData[i++]);
+            }
+            // update once at end of iteration to reduce heap write traffic
+            cursor = i;
+            lastRet = i - 1;
+            checkForComodification();
+        }
+
+        final void checkForComodification() {
+            if (modCount != expectedModCount) //比较与ArrayList的modCount值是否一致
+                throw new ConcurrentModificationException();
+        }
+    }
+```
+
+#### 1.2.4.2 ListItr
+
+```java
+    /**
+     * An optimized version of AbstractList.ListItr
+     */
+    private class ListItr extends Itr implements ListIterator<E> {
+        ListItr(int index) {
+            super();
+            cursor = index;
+        }
+
+        public boolean hasPrevious() {
+            return cursor != 0;
+        }
+
+        public int nextIndex() {
+            return cursor;
+        }
+
+        public int previousIndex() {
+            return cursor - 1;
+        }
+
+        @SuppressWarnings("unchecked")
+        public E previous() {
+            checkForComodification();
+            int i = cursor - 1;
+            if (i < 0)
+                throw new NoSuchElementException();
+            Object[] elementData = ArrayList.this.elementData;
+            if (i >= elementData.length)
+                throw new ConcurrentModificationException();
+            cursor = i;
+            return (E) elementData[lastRet = i];
+        }
+
+        public void set(E e) {
+            if (lastRet < 0)
+                throw new IllegalStateException();
+            checkForComodification();
+
+            try {
+                ArrayList.this.set(lastRet, e);
+            } catch (IndexOutOfBoundsException ex) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        public void add(E e) {
+            checkForComodification();
+
+            try {
+                int i = cursor;
+                ArrayList.this.add(i, e);
+                cursor = i + 1;
+                lastRet = -1;
+                expectedModCount = modCount;
+            } catch (IndexOutOfBoundsException ex) {
+                throw new ConcurrentModificationException();
+            }
+        }
+    }
+```
+
