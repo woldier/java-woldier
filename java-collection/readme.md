@@ -1254,66 +1254,72 @@ private class Itr implements Iterator<E> {
 
 #### 1.2.4.2 ListItr
 
+![image-20230822093550880](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/d9532118661c6d58f5b2fc379c9997a8.png)
+
 ```java
     /**
      * An optimized version of AbstractList.ListItr
      */
     private class ListItr extends Itr implements ListIterator<E> {
-        ListItr(int index) {
+        ListItr(int index) { // 构造参数设置初始游标
             super();
             cursor = index;
         }
 
-        public boolean hasPrevious() {
-            return cursor != 0;
+        public boolean hasPrevious() { //是否还有前驱
+            return cursor != 0; //判断游标是否指向0
         }
 
         public int nextIndex() {
             return cursor;
         }
 
-        public int previousIndex() {
-            return cursor - 1;
+        public int previousIndex() { //返回前驱指针
+            return cursor - 1; 
         }
 
         @SuppressWarnings("unchecked")
-        public E previous() {
-            checkForComodification();
-            int i = cursor - 1;
-            if (i < 0)
+        public E previous() { //游标左移
+            checkForComodification(); //检查并发修改
+            int i = cursor - 1; //保存游标减一的值
+            if (i < 0) //判断是否小于零
                 throw new NoSuchElementException();
-            Object[] elementData = ArrayList.this.elementData;
+            Object[] elementData = ArrayList.this.elementData; //得到ArrayList中的
             if (i >= elementData.length)
                 throw new ConcurrentModificationException();
-            cursor = i;
-            return (E) elementData[lastRet = i];
+            cursor = i; //游标左移
+            return (E) elementData[lastRet = i];//返回游标对应的元素
         }
 
         public void set(E e) {
-            if (lastRet < 0)
+            if (lastRet 这是为了只做一次modify < 0) //判断lastRet 这是为了只做一次modify
                 throw new IllegalStateException();
             checkForComodification();
 
             try {
-                ArrayList.this.set(lastRet, e);
+                ArrayList.this.set(lastRet, e);  // 设置元素
             } catch (IndexOutOfBoundsException ex) {
                 throw new ConcurrentModificationException();
             }
         }
 
         public void add(E e) {
-            checkForComodification();
+            checkForComodification(); //检查并发修改
 
             try {
-                int i = cursor;
-                ArrayList.this.add(i, e);
-                cursor = i + 1;
-                lastRet = -1;
-                expectedModCount = modCount;
+                int i = cursor; //记录当前游标
+                ArrayList.this.add(i, e); //添加元素
+                cursor = i + 1; //游标加1
+                lastRet = -1; //设置最后返回的元素游标为-1,防止调用remove,previous方法
+                expectedModCount = modCount; //更新modify计数
             } catch (IndexOutOfBoundsException ex) {
                 throw new ConcurrentModificationException();
             }
         }
     }
 ```
+
+ 
+
+
 
