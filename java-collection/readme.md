@@ -1321,7 +1321,7 @@ private class Itr implements Iterator<E> {
 
 ####  1.2.4.3 ArrayListSpliterator内部类
 
-- preliminary
+##### 1.2.4.3.1 preliminary
 
 ArrayListSpliterator实现了Spliterator接口,因此首先要搞清楚Spliterator在干什么.
 
@@ -1361,5 +1361,305 @@ ArrayListSpliterator实现了Spliterator接口,因此首先要搞清楚Spliterat
 
 
 
+![image-20230824140928559](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/0d9bcd2c420164c800517958601745f2.png)
 
+```java
+public interface Spliterator<T> {
+    /**
+     * If a remaining element exists, performs the given action on it,
+     * returning {@code true}; else returns {@code false}.  If this
+     * Spliterator is {@link #ORDERED} the action is performed on the
+     * next element in encounter order.  Exceptions thrown by the
+     * action are relayed to the caller.
+     * 如果剩余的元素存在, 那么对该元素执行相应的行为, 并且返回true. 否则返回false. 
+     * 如果Spliterator是ORDERED特征的, 那么将会对相遇顺序中的下一个元素执行操作. 
+     * @param action The action
+     * @return {@code false} if no remaining elements existed
+     * upon entry to this method, else {@code true}.
+     * @throws NullPointerException if the specified action is null
+     */
+    boolean tryAdvance(Consumer<? super T> action);
+
+    /**
+     * Performs the given action for each remaining element, sequentially in
+     * the current thread, until all elements have been processed or the action
+     * throws an exception.  If this Spliterator is {@link #ORDERED}, actions
+     * are performed in encounter order.  Exceptions thrown by the action
+     * are relayed to the caller.
+     * 在本线程中顺序的对于剩余的所有元素执行给定的操作,知道所有的元素都被执行了或者是action抛出异常
+     * 如果Spliterator是ORDERED特征的, 那么将会对相遇顺序中的下一个元素执行操作.
+     * @implSpec
+     * The default implementation repeatedly invokes {@link #tryAdvance} until
+     * it returns {@code false}.  It should be overridden whenever possible.
+     * 默认的实现重复的调用tryAdvance方法知道其返回false. 在可能的情况下,需要将其覆盖.
+     * @param action The action
+     * @throws NullPointerException if the specified action is null
+     */
+    default void forEachRemaining(Consumer<? super T> action) {
+        do { } while (tryAdvance(action));
+    }
+
+    /**
+     * If this spliterator can be partitioned, returns a Spliterator
+     * covering elements, that will, upon return from this method, not
+     * be covered by this Spliterator.
+     * 如果本spliterator是可以分块的, 返回的一个Spliterator中的元素包含有本Spliterator
+     * 将会不包含的元素
+     * <p>If this Spliterator is {@link #ORDERED}, the returned Spliterator
+     * must cover a strict prefix of the elements.
+     * 如果Spliterator是ORDERED类型的, 那么返回的Spliterator其元素也是严格排序的
+     * <p>Unless this Spliterator covers an infinite number of elements,
+     * repeated calls to {@code trySplit()} must eventually return {@code null}.
+     * Upon non-null return:
+     * 除非本Spliterator所覆盖的元素是无穷多的, 重复的(递归)调用trySplit()最终都会返回null
+     * <ul>
+     * <li>the value reported for {@code estimateSize()} before splitting,
+     * must, after splitting, be greater than or equal to {@code estimateSize()}
+     * for this and the returned Spliterator; and</li>
+     * 拆分之前estimateSize()返回的值必须大于或者等于拆分后estimateSize()方法返回的
+     * <li>if this Spliterator is {@code SUBSIZED}, then {@code estimateSize()}
+     * for this spliterator before splitting must be equal to the sum of
+     * {@code estimateSize()} for this and the returned Spliterator after
+     * splitting.</li>
+     * 如果说Spliterator是SUBSIZED特征, 那么本Spliterator拆分前的大小必须严格的等于拆分后本Spliterator的大小	    * 与新的Spliterator大小之和
+     * </ul>
+     *
+     * <p>This method may return {@code null} for any reason,
+     * including emptiness, inability to split after traversal has
+     * commenced, data structure constraints, and efficiency
+     * considerations.
+     * 本方法在一些情况下会返回null, 包括空,遍历开始后不能够进行拆分, 数据结构的约束, 以及效率考虑.
+     * @apiNote
+     * An ideal {@code trySplit} method efficiently (without
+     * traversal) divides its elements exactly in half, allowing
+     * balanced parallel computation.  Many departures from this ideal
+     * remain highly effective; for example, only approximately
+     * splitting an approximately balanced tree, or for a tree in
+     * which leaf nodes may contain either one or two elements,
+     * failing to further split these nodes.  However, large
+     * deviations in balance and/or overly inefficient {@code
+     * trySplit} mechanics typically result in poor parallel
+     * performance.
+     * 一个理想的trySplit方法高效的将其元素对半拆分(在没有开始遍历之前)那么将可以进行平衡的并行计算.
+     * 许多偏离这一理想的做法仍然非常有效. 举个例子, 只有接近的拆分成接近平衡的树,或者对于一个树,
+     * 其叶子节点只包括一个或者两个节点. 
+     * @return a {@code Spliterator} covering some portion of the
+     * elements, or {@code null} if this spliterator cannot be split
+     */
+    Spliterator<T> trySplit();
+
+    /**
+     * Returns an estimate of the number of elements that would be
+     * encountered by a {@link #forEachRemaining} traversal, or returns {@link
+     * Long#MAX_VALUE} if infinite, unknown, or too expensive to compute.
+     *
+     * <p>If this Spliterator is {@link #SIZED} and has not yet been partially
+     * traversed or split, or this Spliterator is {@link #SUBSIZED} and has
+     * not yet been partially traversed, this estimate must be an accurate
+     * count of elements that would be encountered by a complete traversal.
+     * Otherwise, this estimate may be arbitrarily inaccurate, but must decrease
+     * as specified across invocations of {@link #trySplit}.
+     *
+     * @apiNote
+     * Even an inexact estimate is often useful and inexpensive to compute.
+     * For example, a sub-spliterator of an approximately balanced binary tree
+     * may return a value that estimates the number of elements to be half of
+     * that of its parent; if the root Spliterator does not maintain an
+     * accurate count, it could estimate size to be the power of two
+     * corresponding to its maximum depth.
+     *
+     * @return the estimated size, or {@code Long.MAX_VALUE} if infinite,
+     *         unknown, or too expensive to compute.
+     */
+    long estimateSize();
+
+    /**
+     * Convenience method that returns {@link #estimateSize()} if this
+     * Spliterator is {@link #SIZED}, else {@code -1}.
+     * @implSpec
+     * The default implementation returns the result of {@code estimateSize()}
+     * if the Spliterator reports a characteristic of {@code SIZED}, and
+     * {@code -1} otherwise.
+     *
+     * @return the exact size, if known, else {@code -1}.
+     */
+    default long getExactSizeIfKnown() {
+        return (characteristics() & SIZED) == 0 ? -1L : estimateSize();
+    }
+
+    /**
+     * Returns a set of characteristics of this Spliterator and its
+     * elements. The result is represented as ORed values from {@link
+     * #ORDERED}, {@link #DISTINCT}, {@link #SORTED}, {@link #SIZED},
+     * {@link #NONNULL}, {@link #IMMUTABLE}, {@link #CONCURRENT},
+     * {@link #SUBSIZED}.  Repeated calls to {@code characteristics()} on
+     * a given spliterator, prior to or in-between calls to {@code trySplit},
+     * should always return the same result.
+     *
+     * <p>If a Spliterator reports an inconsistent set of
+     * characteristics (either those returned from a single invocation
+     * or across multiple invocations), no guarantees can be made
+     * about any computation using this Spliterator.
+     *
+     * @apiNote The characteristics of a given spliterator before splitting
+     * may differ from the characteristics after splitting.  For specific
+     * examples see the characteristic values {@link #SIZED}, {@link #SUBSIZED}
+     * and {@link #CONCURRENT}.
+     *
+     * @return a representation of characteristics
+     */
+    int characteristics();
+
+    /**
+     * Returns {@code true} if this Spliterator's {@link
+     * #characteristics} contain all of the given characteristics.
+     *
+     * @implSpec
+     * The default implementation returns true if the corresponding bits
+     * of the given characteristics are set.
+     *
+     * @param characteristics the characteristics to check for
+     * @return {@code true} if all the specified characteristics are present,
+     * else {@code false}
+     */
+    default boolean hasCharacteristics(int characteristics) {
+        return (characteristics() & characteristics) == characteristics;
+    }
+
+    /**
+     * If this Spliterator's source is {@link #SORTED} by a {@link Comparator},
+     * returns that {@code Comparator}. If the source is {@code SORTED} in
+     * {@linkplain Comparable natural order}, returns {@code null}.  Otherwise,
+     * if the source is not {@code SORTED}, throws {@link IllegalStateException}.
+     *
+     * @implSpec
+     * The default implementation always throws {@link IllegalStateException}.
+     *
+     * @return a Comparator, or {@code null} if the elements are sorted in the
+     * natural order.
+     * @throws IllegalStateException if the spliterator does not report
+     *         a characteristic of {@code SORTED}.
+     */
+    default Comparator<? super T> getComparator() {
+        throw new IllegalStateException();
+    }
+
+    /**
+     * Characteristic value signifying that an encounter order is defined for
+     * elements. If so, this Spliterator guarantees that method
+     * {@link #trySplit} splits a strict prefix of elements, that method
+     * {@link #tryAdvance} steps by one element in prefix order, and that
+     * {@link #forEachRemaining} performs actions in encounter order.
+     *
+     * <p>A {@link Collection} has an encounter order if the corresponding
+     * {@link Collection#iterator} documents an order. If so, the encounter
+     * order is the same as the documented order. Otherwise, a collection does
+     * not have an encounter order.
+     *
+     * @apiNote Encounter order is guaranteed to be ascending index order for
+     * any {@link List}. But no order is guaranteed for hash-based collections
+     * such as {@link HashSet}. Clients of a Spliterator that reports
+     * {@code ORDERED} are expected to preserve ordering constraints in
+     * non-commutative parallel computations.
+     */
+    public static final int ORDERED    = 0x00000010;
+
+    /**
+     * Characteristic value signifying that, for each pair of
+     * encountered elements {@code x, y}, {@code !x.equals(y)}. This
+     * applies for example, to a Spliterator based on a {@link Set}.
+     */
+    public static final int DISTINCT   = 0x00000001;
+
+    /**
+     * Characteristic value signifying that encounter order follows a defined
+     * sort order. If so, method {@link #getComparator()} returns the associated
+     * Comparator, or {@code null} if all elements are {@link Comparable} and
+     * are sorted by their natural ordering.
+     *
+     * <p>A Spliterator that reports {@code SORTED} must also report
+     * {@code ORDERED}.
+     *
+     * @apiNote The spliterators for {@code Collection} classes in the JDK that
+     * implement {@link NavigableSet} or {@link SortedSet} report {@code SORTED}.
+     */
+    public static final int SORTED     = 0x00000004;
+
+    /**
+     * Characteristic value signifying that the value returned from
+     * {@code estimateSize()} prior to traversal or splitting represents a
+     * finite size that, in the absence of structural source modification,
+     * represents an exact count of the number of elements that would be
+     * encountered by a complete traversal.
+     *
+     * @apiNote Most Spliterators for Collections, that cover all elements of a
+     * {@code Collection} report this characteristic. Sub-spliterators, such as
+     * those for {@link HashSet}, that cover a sub-set of elements and
+     * approximate their reported size do not.
+     */
+    public static final int SIZED      = 0x00000040;
+
+    /**
+     * Characteristic value signifying that the source guarantees that
+     * encountered elements will not be {@code null}. (This applies,
+     * for example, to most concurrent collections, queues, and maps.)
+     */
+    public static final int NONNULL    = 0x00000100;
+
+    /**
+     * Characteristic value signifying that the element source cannot be
+     * structurally modified; that is, elements cannot be added, replaced, or
+     * removed, so such changes cannot occur during traversal. A Spliterator
+     * that does not report {@code IMMUTABLE} or {@code CONCURRENT} is expected
+     * to have a documented policy (for example throwing
+     * {@link ConcurrentModificationException}) concerning structural
+     * interference detected during traversal.
+     */
+    public static final int IMMUTABLE  = 0x00000400;
+
+    /**
+     * Characteristic value signifying that the element source may be safely
+     * concurrently modified (allowing additions, replacements, and/or removals)
+     * by multiple threads without external synchronization. If so, the
+     * Spliterator is expected to have a documented policy concerning the impact
+     * of modifications during traversal.
+     *
+     * <p>A top-level Spliterator should not report both {@code CONCURRENT} and
+     * {@code SIZED}, since the finite size, if known, may change if the source
+     * is concurrently modified during traversal. Such a Spliterator is
+     * inconsistent and no guarantees can be made about any computation using
+     * that Spliterator. Sub-spliterators may report {@code SIZED} if the
+     * sub-split size is known and additions or removals to the source are not
+     * reflected when traversing.
+     *
+     * @apiNote Most concurrent collections maintain a consistency policy
+     * guaranteeing accuracy with respect to elements present at the point of
+     * Spliterator construction, but possibly not reflecting subsequent
+     * additions or removals.
+     */
+    public static final int CONCURRENT = 0x00001000;
+
+    /**
+     * Characteristic value signifying that all Spliterators resulting from
+     * {@code trySplit()} will be both {@link #SIZED} and {@link #SUBSIZED}.
+     * (This means that all child Spliterators, whether direct or indirect, will
+     * be {@code SIZED}.)
+     *
+     * <p>A Spliterator that does not report {@code SIZED} as required by
+     * {@code SUBSIZED} is inconsistent and no guarantees can be made about any
+     * computation using that Spliterator.
+     *
+     * @apiNote Some spliterators, such as the top-level spliterator for an
+     * approximately balanced binary tree, will report {@code SIZED} but not
+     * {@code SUBSIZED}, since it is common to know the size of the entire tree
+     * but not the exact sizes of subtrees.
+     */
+    public static final int SUBSIZED = 0x00004000;
+
+
+   
+
+    
+}
+```
 
