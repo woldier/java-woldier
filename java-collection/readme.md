@@ -1421,7 +1421,7 @@ public interface Spliterator<T> {
      * for this spliterator before splitting must be equal to the sum of
      * {@code estimateSize()} for this and the returned Spliterator after
      * splitting.</li>
-     * 如果说Spliterator是SUBSIZED特征, 那么本Spliterator拆分前的大小必须严格的等于拆分后本Spliterator的大小	    * 与新的Spliterator大小之和
+     * 如果说Spliterator是SUBSIZED特征, 那么本Spliterator拆分前的大小必须严格的等于拆分后本Spliterator的大小	        * 与新的Spliterator大小之和
      * </ul>
      *
      * <p>This method may return {@code null} for any reason,
@@ -1452,14 +1452,17 @@ public interface Spliterator<T> {
      * Returns an estimate of the number of elements that would be
      * encountered by a {@link #forEachRemaining} traversal, or returns {@link
      * Long#MAX_VALUE} if infinite, unknown, or too expensive to compute.
-     *
+     * 返回将会被便利所遇到的元素数量的估计值, 或者返回int类型的MAX_VALUE(如果说是无限,未知,计算消耗过长的话)
+     * 
      * <p>If this Spliterator is {@link #SIZED} and has not yet been partially
      * traversed or split, or this Spliterator is {@link #SUBSIZED} and has
      * not yet been partially traversed, this estimate must be an accurate
      * count of elements that would be encountered by a complete traversal.
      * Otherwise, this estimate may be arbitrarily inaccurate, but must decrease
      * as specified across invocations of {@link #trySplit}.
-     *
+     * 如果本Spliterator是SIZED并且还仍未遍历任何元素或者是进一步分块, 或者说Spliterator是SUBSIZED
+     * 还仍未被部分的遍历, 那么必须准确的估计遍历将遇到的元素.  否则的话, 估计值或许准确度是不可控的, 
+     * 但是在调用trySplit时必须按规定减少.
      * @apiNote
      * Even an inexact estimate is often useful and inexpensive to compute.
      * For example, a sub-spliterator of an approximately balanced binary tree
@@ -1467,7 +1470,9 @@ public interface Spliterator<T> {
      * that of its parent; if the root Spliterator does not maintain an
      * accurate count, it could estimate size to be the power of two
      * corresponding to its maximum depth.
-     *
+     * 即使时不准确的估计值常常也是有用的并且统计的性能消耗很小. 
+     * 举个例子, 一个sub-spliterator的趋于平衡的二叉树可能返回元素数量的估计值, 该值是其父亲的一半.
+     * 如果说根Spliterator并没有维护一个精确的计数, 它就会将大小估计为与其最大深度相对应的 2 的幂次。
      * @return the estimated size, or {@code Long.MAX_VALUE} if infinite,
      *         unknown, or too expensive to compute.
      */
@@ -1495,17 +1500,19 @@ public interface Spliterator<T> {
      * {@link #SUBSIZED}.  Repeated calls to {@code characteristics()} on
      * a given spliterator, prior to or in-between calls to {@code trySplit},
      * should always return the same result.
-     *
+     * 返回当前Spliterator的特征属性, 在trySplit调用之前或者是在trySplit调用的前后,
+     * 重复调用本方法的返回值是相同的
      * <p>If a Spliterator reports an inconsistent set of
      * characteristics (either those returned from a single invocation
      * or across multiple invocations), no guarantees can be made
      * about any computation using this Spliterator.
-     *
+     * 如果一个Spliterator报告了多个特征属性(不管是从一次调用中或者是多次调用), 
+     * 那么本Spliterator的任何计算都不能得到保证
      * @apiNote The characteristics of a given spliterator before splitting
      * may differ from the characteristics after splitting.  For specific
      * examples see the characteristic values {@link #SIZED}, {@link #SUBSIZED}
      * and {@link #CONCURRENT}.
-     *
+     * 给定的spliterator的特征属性在进一步分块之前与之后可能是不同的
      * @return a representation of characteristics
      */
     int characteristics();
@@ -1513,11 +1520,11 @@ public interface Spliterator<T> {
     /**
      * Returns {@code true} if this Spliterator's {@link
      * #characteristics} contain all of the given characteristics.
-     *
+     * 如果说Spliterator的特征属性包含给出的所有特征属性返回true
      * @implSpec
      * The default implementation returns true if the corresponding bits
      * of the given characteristics are set.
-     *
+     * 默认实现返回true,如果说相应的bit位是被设置的.
      * @param characteristics the characteristics to check for
      * @return {@code true} if all the specified characteristics are present,
      * else {@code false}
@@ -1531,7 +1538,9 @@ public interface Spliterator<T> {
      * returns that {@code Comparator}. If the source is {@code SORTED} in
      * {@linkplain Comparable natural order}, returns {@code null}.  Otherwise,
      * if the source is not {@code SORTED}, throws {@link IllegalStateException}.
-     *
+     * 如果Spliterator源是SORTED并且是通过Comparator来进行比较的,那么返回Comparator.
+     * 如果说是SORTED并且排序方式是Comparable natural order,那么返回null. 否则的话, 
+     * 如果不是SORTED,抛出IllegalStateException异常
      * @implSpec
      * The default implementation always throws {@link IllegalStateException}.
      *
@@ -1550,17 +1559,20 @@ public interface Spliterator<T> {
      * {@link #trySplit} splits a strict prefix of elements, that method
      * {@link #tryAdvance} steps by one element in prefix order, and that
      * {@link #forEachRemaining} performs actions in encounter order.
-     *
+     * 特征属性值,表明遇到的元素是有序的. 如果是这样的话, Spliterator 确保方法trySplit根据元素的prefix分块元素
+     * 方法tryAdvance根据元素的prefix来进行步进, forEachRemaining根据元素的顺序来进行action. 
      * <p>A {@link Collection} has an encounter order if the corresponding
      * {@link Collection#iterator} documents an order. If so, the encounter
      * order is the same as the documented order. Otherwise, a collection does
      * not have an encounter order.
-     *
+     * 一个集合如果说相应的迭代器标注了是有序的,那么其Spliterator有着encounter顺序. 否则的话则没有.
      * @apiNote Encounter order is guaranteed to be ascending index order for
      * any {@link List}. But no order is guaranteed for hash-based collections
      * such as {@link HashSet}. Clients of a Spliterator that reports
      * {@code ORDERED} are expected to preserve ordering constraints in
      * non-commutative parallel computations.
+     * 对于List来说, Encounter顺序被递增的索引顺序保证. 但是没有任何顺序被基于hash的集合所保证(比如说hashset)
+     * 报告 {@code ORDERED} 的 Spliterator 客户端应在非交换并行计算中保留排序约束。
      */
     public static final int ORDERED    = 0x00000010;
 
@@ -1568,6 +1580,8 @@ public interface Spliterator<T> {
      * Characteristic value signifying that, for each pair of
      * encountered elements {@code x, y}, {@code !x.equals(y)}. This
      * applies for example, to a Spliterator based on a {@link Set}.
+     * 本特征值表明, 对于任何一对元素x,y 都有 !x.equals(y).
+     * 举个例子, Set会持有此属性
      */
     public static final int DISTINCT   = 0x00000001;
 
@@ -1576,12 +1590,14 @@ public interface Spliterator<T> {
      * sort order. If so, method {@link #getComparator()} returns the associated
      * Comparator, or {@code null} if all elements are {@link Comparable} and
      * are sorted by their natural ordering.
-     *
+     * 本特征值表明, encounter顺序遵循一个被定义的排序. 如果是这样的话, 那么getComparator()方法
+     * 返回与之管理的比较器, 或者是null如果所有的元素都是可以比较的,并且根据自然的顺序排序(比如说队列) 
      * <p>A Spliterator that reports {@code SORTED} must also report
      * {@code ORDERED}.
-     *
+     * 报道SORTED属性那么必须报告出ORDERED
      * @apiNote The spliterators for {@code Collection} classes in the JDK that
      * implement {@link NavigableSet} or {@link SortedSet} report {@code SORTED}.
+     * NavigableSet, SortedSet都报告出SORTED.
      */
     public static final int SORTED     = 0x00000004;
 
@@ -1591,7 +1607,7 @@ public interface Spliterator<T> {
      * finite size that, in the absence of structural source modification,
      * represents an exact count of the number of elements that would be
      * encountered by a complete traversal.
-     *
+     * 
      * @apiNote Most Spliterators for Collections, that cover all elements of a
      * {@code Collection} report this characteristic. Sub-spliterators, such as
      * those for {@link HashSet}, that cover a sub-set of elements and
@@ -1661,5 +1677,148 @@ public interface Spliterator<T> {
 
     
 }
+```
+
+##### 1.2.4.3.2 ArrayListSpliterator
+
+结构如下
+
+![image-20230825103732335](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F08%2F8b72d143c260e16d197d49494794a938.png)
+
+
+
+```java
+    /** Index-based split-by-two, lazily initialized Spliterator */
+    static final class ArrayListSpliterator<E> implements Spliterator<E> {
+
+        /*
+         * If ArrayLists were immutable, or structurally immutable (no
+         * adds, removes, etc), we could implement their spliterators
+         * with Arrays.spliterator. Instead we detect as much
+         * interference during traversal as practical without
+         * sacrificing much performance. We rely primarily on
+         * modCounts. These are not guaranteed to detect concurrency
+         * violations, and are sometimes overly conservative about
+         * within-thread interference, but detect enough problems to
+         * be worthwhile in practice. 
+         * 如果ArrayList是不能相互作用的, 或者是结构不能相互作用的(没有add,remove等),
+         * 我们可以通过Arrays.spliterator实现其spliterators. 相反，我们在不影响性能的前提下，
+         * 在遍历过程中尽可能多地检测干扰。我们主要依赖modCounts. 这并不能确保检测到并发的原子修改, 
+         * 并且对线程内干扰的也过于保守, 但是实际使用中足够检测问题.
+         * To carry this out, we (1) lazily
+         * initialize fence and expectedModCount until the latest
+         * point that we need to commit to the state we are checking
+         * against; thus improving precision.  (This doesn't apply to
+         * SubLists, that create spliterators with current non-lazy
+         * values).  
+         * 为了实现, 我们(1) 懒惰的初始化fence和expectedModCount直到最后的需要提交我们正在检查状态的point分配
+         * (2) We perform only a single
+         * ConcurrentModificationException check at the end of forEach
+         * (the most performance-sensitive method). When using forEach
+         * (as opposed to iterators), we can normally only detect
+         * interference after actions, not before. Further
+         * CME-triggering checks apply to all other possible
+         * violations of assumptions for example null or too-small
+         * elementData array given its size(), that could only have
+         * occurred due to interference.  This allows the inner loop
+         * of forEach to run without any further checks, and
+         * simplifies lambda-resolution. While this does entail a
+         * number of checks, note that in the common case of
+         * list.stream().forEach(a), no checks or other computation
+         * occur anywhere other than inside forEach itself.  The other
+         * less-often-used methods cannot take advantage of most of
+         * these streamlinings.
+         * 在forEach结束之后我们进行了唯一一次ConcurrentModificationException检查. 
+         * 当使用forEach时候(与Iterator中不同), 我们通常只在action之后检测干扰情况, 而不是之前.
+         * 进一步的 CME 触发检查适用于所有其他可能违反假设的情况，例如，在元素数据数组的 size() 条件下出现空
+         * 或过小的情况，而这些情况只可能是由于干扰造成的。
+         * 这使得forEach的内部循环在没有更进一步的检查的情况下运行, 并且简化lambda解析. 
+         * 虽然这确实需要进行一些检查，但请注意，在 list.stream().forEach(a) 的常见情况下，
+         * 除了 forEach 本身之外，不会在其他地方进行检查或其他计算。 
+         * 其他不常用的方法则无法利用这些精简的大部分功能。
+         */
+
+        private final ArrayList<E> list; //关联list
+        private int index; // current index, modified on advance/split
+        private int fence; // -1 until used; then one past last index
+        private int expectedModCount; // initialized when fence set
+
+        /** Create new spliterator covering the given  range */
+        ArrayListSpliterator(ArrayList<E> list, int origin, int fence,
+                             int expectedModCount) {
+            this.list = list; // OK if null unless traversed
+            this.index = origin;
+            this.fence = fence;
+            this.expectedModCount = expectedModCount;
+        }
+
+        private int getFence() { // initialize fence to size on first use
+            int hi; // (a specialized variant appears in method forEach)
+            ArrayList<E> lst;
+            if ((hi = fence) < 0) { // fence未初始化的时候成立
+                if ((lst = list) == null) //如果list是空
+                    hi = fence = 0; //设置hi 和fence等于0
+                else { //list不是空 
+                    expectedModCount = lst.modCount; //设置modCount
+                    hi = fence = lst.size; //设置长度
+                }
+            }
+            return hi;
+        }
+
+        public ArrayListSpliterator<E> trySplit() {
+            int hi = getFence(), lo = index, mid = (lo + hi) >>> 1;
+            return (lo >= mid) ? null : // divide range in half unless too small
+                new ArrayListSpliterator<E>(list, lo, index = mid,
+                                            expectedModCount);
+        }
+
+        public boolean tryAdvance(Consumer<? super E> action) {
+            if (action == null)
+                throw new NullPointerException();
+            int hi = getFence(), i = index;
+            if (i < hi) {
+                index = i + 1;
+                @SuppressWarnings("unchecked") E e = (E)list.elementData[i];
+                action.accept(e);
+                if (list.modCount != expectedModCount)
+                    throw new ConcurrentModificationException();
+                return true;
+            }
+            return false;
+        }
+
+        public void forEachRemaining(Consumer<? super E> action) {
+            int i, hi, mc; // hoist accesses and checks from loop
+            ArrayList<E> lst; Object[] a;
+            if (action == null)
+                throw new NullPointerException();
+            if ((lst = list) != null && (a = lst.elementData) != null) {
+                if ((hi = fence) < 0) {
+                    mc = lst.modCount;
+                    hi = lst.size;
+                }
+                else
+                    mc = expectedModCount;
+                if ((i = index) >= 0 && (index = hi) <= a.length) {
+                    for (; i < hi; ++i) {
+                        @SuppressWarnings("unchecked") E e = (E) a[i];
+                        action.accept(e);
+                    }
+                    if (lst.modCount == mc)
+                        return;
+                }
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        public long estimateSize() {
+            return (long) (getFence() - index);
+        }
+
+        public int characteristics() {
+            return Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
+        }
+    }
 ```
 
