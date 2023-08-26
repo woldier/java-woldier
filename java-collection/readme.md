@@ -1755,7 +1755,7 @@ public interface Spliterator<T> {
         private int getFence() { // initialize fence to size on first use
             int hi; // (a specialized variant appears in method forEach)
             ArrayList<E> lst;
-            if ((hi = fence) < 0) { // fence未初始化的时候成立
+            if ((hi = fence) < 0) { // fence未初始化的时候成立，说明此spliterator是root
                 if ((lst = list) == null) //如果list是空
                     hi = fence = 0; //设置hi 和fence等于0
                 else { //list不是空 
@@ -1766,22 +1766,22 @@ public interface Spliterator<T> {
             return hi;
         }
 
-        public ArrayListSpliterator<E> trySplit() {
-            int hi = getFence(), lo = index, mid = (lo + hi) >>> 1;
+        public ArrayListSpliterator<E> trySplit() {  //尝试拆分
+            int hi = getFence(), lo = index, mid = (lo + hi) >>> 1; //得到中间位置，用位操作防止溢出
             return (lo >= mid) ? null : // divide range in half unless too small
-                new ArrayListSpliterator<E>(list, lo, index = mid,
+                new ArrayListSpliterator<E>(list, lo, index = mid, //重新设置index
                                             expectedModCount);
         }
 
         public boolean tryAdvance(Consumer<? super E> action) {
-            if (action == null)
+            if (action == null) //判断传入的func是否是空
                 throw new NullPointerException();
-            int hi = getFence(), i = index;
-            if (i < hi) {
-                index = i + 1;
-                @SuppressWarnings("unchecked") E e = (E)list.elementData[i];
-                action.accept(e);
-                if (list.modCount != expectedModCount)
+            int hi = getFence(), i = index; //暂存栅栏和索引值
+            if (i < hi) { //判断索引是否超过fence
+                index = i + 1; //索引加一
+                @SuppressWarnings("unchecked") E e = (E)list.elementData[i]; //获取对于位置的元素
+                action.accept(e); //执行函数
+                if (list.modCount != expectedModCount) //检查并发修改
                     throw new ConcurrentModificationException();
                 return true;
             }
@@ -1790,26 +1790,29 @@ public interface Spliterator<T> {
 
         public void forEachRemaining(Consumer<? super E> action) {
             int i, hi, mc; // hoist accesses and checks from loop
-            ArrayList<E> lst; Object[] a;
-            if (action == null)
+            ArrayList<E> lst; Object[] a; 
+            if (action == null) //判断action是否为空
                 throw new NullPointerException();
-            if ((lst = list) != null && (a = lst.elementData) != null) {
-                if ((hi = fence) < 0) {
-                    mc = lst.modCount;
-                    hi = lst.size;
+            if ((lst = list) != null && (a = lst.elementData) != null) { 
+              //list不为空，并且list数组不为空
+                if ((hi = fence) < 0) { //如果将fence的值赋值给hi，然后判断hi的值是否是小于零
+                  // fence小于零的情况是还未初始化（因为是了lazy ini）
+                    mc = lst.modCount;  //赋值modifycount
+                    hi = lst.size; //设置li的最大索引
                 }
                 else
-                    mc = expectedModCount;
-                if ((i = index) >= 0 && (index = hi) <= a.length) {
+                    mc = expectedModCount;  // 暂存expectedModCount
+                if ((i = index) >= 0 && (index = hi) <= a.length) { 
+                  //当前索引大于等于零 ，然后将hi的值赋值给index 并且赋之后的index值小于数组a的长度
                     for (; i < hi; ++i) {
                         @SuppressWarnings("unchecked") E e = (E) a[i];
                         action.accept(e);
                     }
-                    if (lst.modCount == mc)
+                    if (lst.modCount == mc) //执行for之后 判断mc是否发生了改变
                         return;
                 }
             }
-            throw new ConcurrentModificationException();
+            throw new ConcurrentModificationException(); //抛出异常
         }
 
         public long estimateSize() {
@@ -1820,5 +1823,302 @@ public interface Spliterator<T> {
             return Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
         }
     }
+```
+
+#### 1.2.4.4 实现的List接口
+
+![image-20230826102353764](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/3ce0daa97b04e87b935deceac9e05ecc.png)
+
+实现的方法，有的来自于AbstractCollection，有的来自于AbstractList
+
+接下来，我们一个一个分析方法，查看继承自哪个类
+
+- size
+
+![image-20230826103628973](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/39a4db62caeaabbc21898f7b998d44b7.png)
+
+本方法继承自AbstractCollection，并且将其进行了重写
+
+```java
+     public abstract int size();
+```
+
+```java
+    
+
+		/**
+     * Returns the number of elements in this list.
+     *
+     * @return the number of elements in this list
+     */
+		@Override
+    public int size() {
+        return size;
+    }
+```
+
+- isEmpty方法
+
+![image-20230826120154681](/Users/user/Library/Application Support/typora-user-images/image-20230826120154681.png)
+
+isEmpty方法继承并且重写了AbstractCollection中的方法
+
+先看一下父类中的方法
+
+```java
+public boolean isEmpty() {
+        return size() == 0;
+    }
+```
+
+在看一下重写的方法
+
+```java
+    /**
+     * Returns <tt>true</tt> if this list contains no elements.
+     *
+     * @return <tt>true</tt> if this list contains no elements
+     */
+    public boolean isEmpty() {
+        return size == 0;
+    }
+```
+
+发现完全是一致的，就是copy了父类的方法
+
+
+
+- contains
+
+![image-20230826120453456](/Users/user/Library/Application Support/typora-user-images/image-20230826120453456.png)
+
+
+
+先查看一下父类中的方法，本方法在AbstractCollection中介绍过了（算法思想是通过迭代器去遍历元素）
+
+```java
+  public boolean contains(Object o) {
+        Iterator<E> it = iterator();
+        if (o==null) {
+            while (it.hasNext())
+                if (it.next()==null)
+                    return true;
+        } else {
+            while (it.hasNext())
+                if (o.equals(it.next()))
+                    return true;
+        }
+        return false;
+    }
+```
+
+
+
+而ArrayList的实现类中则是重写了逻辑， 通过调用indexOf方法查找元素
+
+```java
+public boolean contains(Object o) {
+        return indexOf(o) >= 0;
+    }
+```
+
+对一indexOf方法的介绍，可以继续看List接口的方法实现
+
+
+
+- indexOf
+
+![image-20230826120955473](/Users/user/Library/Application Support/typora-user-images/image-20230826120955473.png)
+
+indexOf方法继承自AbstractList
+
+先看一下AbstractList的实现(本方法在之前已经介绍过了，因此不做过多说明，可以查看对应的章节)
+
+```java
+ public int indexOf(Object o) {
+        ListIterator<E> it = listIterator();
+        if (o==null) {
+            while (it.hasNext())
+                if (it.next()==null)
+                    return it.previousIndex();
+        } else {
+            while (it.hasNext())
+                if (o.equals(it.next()))
+                    return it.previousIndex();
+        }
+        return -1;
+    }
+```
+
+再看看ArrayList的实现
+
+```java
+    /**
+     * Returns the index of the first occurrence of the specified element
+     * in this list, or -1 if this list does not contain the element.
+     * More formally, returns the lowest index <tt>i</tt> such that
+     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>,
+     * or -1 if there is no such index.
+     */
+    public int indexOf(Object o) {
+        if (o == null) { //判断空
+            for (int i = 0; i < size; i++)
+                if (elementData[i]==null)
+                    return i;
+        } else { //非空
+            for (int i = 0; i < size; i++)
+                if (o.equals(elementData[i]))
+                    return i;
+        }
+        return -1;
+    }
+```
+
+- LastIndexOf
+
+![image-20230826121458695](/Users/user/Library/Application Support/typora-user-images/image-20230826121458695.png)
+
+本方法继承自AbstractList并且做了重写
+
+先看看父类的逻辑(和indexOf相同，都是基于迭代器完成的)
+
+```java
+    public int lastIndexOf(Object o) {
+        ListIterator<E> it = listIterator(size());
+        if (o==null) {
+            while (it.hasPrevious())
+                if (it.previous()==null)
+                    return it.nextIndex();
+        } else {
+            while (it.hasPrevious())
+                if (o.equals(it.previous()))
+                    return it.nextIndex();
+        }
+        return -1;
+    }
+```
+
+再查看一下ArrayList的实现(于indexOf实现思想差不多，不过是从尾向头部扫描)
+
+```java
+  public int lastIndexOf(Object o) {
+        if (o == null) {
+            for (int i = size-1; i >= 0; i--)
+                if (elementData[i]==null)
+                    return i;
+        } else {
+            for (int i = size-1; i >= 0; i--)
+                if (o.equals(elementData[i]))
+                    return i;
+        }
+        return -1;
+    }
+```
+
+- toArray
+
+![image-20230826122007740](/Users/user/Library/Application Support/typora-user-images/image-20230826122007740.png)
+
+继承自AbstractCollection
+
+先查看一下父类的实现
+
+父类做的事情是先获取到迭代器，然后把迭代器中的元素拷贝到对应的对象数组中。
+
+```java
+public Object[] toArray() {
+    // Estimate size of array; be prepared to see more or fewer elements
+    Object[] r = new Object[size()];
+    Iterator<E> it = iterator();
+    for (int i = 0; i < r.length; i++) {
+        if (! it.hasNext()) // fewer elements than expected
+            return Arrays.copyOf(r, i);
+        r[i] = it.next();
+    }
+    return it.hasNext() ? finishToArray(r, it) : r;
+}
+```
+
+而对于AyyayList来说，内部维护的就是一个数组。 那么通过迭代器，创建数组的方式是低效的。
+
+完全可以直接调用`System.ArrayCopy`方法完成上述任务
+
+接下来看一下ArrayList的实现非常的简洁明了。
+
+但是需要注意的是，如果说ArrayList中保存的元素类型不是基本类型，那么拷贝的数组中的对象都是指针引用。
+
+因此在拷贝的数组中修改对象中的属性，会对源ArrayList产生影响
+
+```java
+public Object[] toArray() {
+    return Arrays.copyOf(elementData, size);
+}
+```
+
+- toArray(T[] a)
+
+![image-20230826122633633](/Users/user/Library/Application Support/typora-user-images/image-20230826122633633.png)
+
+toArray方法的重载
+
+先查看下父类的实现。
+
+```java
+public <T> T[] toArray(T[] a) {
+    // Estimate size of array; be prepared to see more or fewer elements
+    int size = size(); //得到集合的容量
+    T[] r = a.length >= size ? a : //如果a的长度大于或者等于当前集合的容量，那么就使用a作为返回集
+              (T[])java.lang.reflect.Array //否则创建一个可以容纳返回集size的数组
+              .newInstance(a.getClass().getComponentType(), size);
+    Iterator<E> it = iterator();
+
+    for (int i = 0; i < r.length; i++) {
+        if (! it.hasNext()) { // fewer elements than expected  当前的元素数量比期望中的小
+            if (a == r) { //如果说a与r是同一个数组，说明并没有因为a的容量不足而创建一个新的数组
+                r[i] = null; // null-terminate
+            } else if (a.length < i) { //能够进入本if判断，说明a容量不足，创建了一个新的。并且当前遍历到的指针索引已经超过了a的最大长度。
+                return Arrays.copyOf(r, i); //那么进行trim操作，然后返回
+            } else { //能够进入到这说明r不是a，并且当前遍地到的索引还没有超过a的最大长度
+                System.arraycopy(r, 0, a, 0, i);//数组拷贝，将r中的元素拷贝到a中
+                if (a.length > i) {//判断a的索引值是否小于i，如果是，那么设置索引i的元素为null
+                    a[i] = null;
+                }
+            }
+            return a;
+        }
+        r[i] = (T)it.next();
+    }
+    // more elements than expected
+    return it.hasNext() ? finishToArray(r, it) : r; //处理当前元素比预期多的情况
+}
+```
+
+再看一下子类的实现
+
+```java
+ public <T> T[] toArray(T[] a) {
+        if (a.length < size) //如果说给的的数组a的最大长度小于当前的大小
+            // Make a new array of a's runtime type, but my contents:
+            return (T[]) Arrays.copyOf(elementData, size, a.getClass());
+   //能够执行接下来的代码说明a的最大长度大于或者等于size
+        System.arraycopy(elementData, 0, a, 0, size); //数组拷贝
+        if (a.length > size) //判断a的长度大于size的情况
+            a[size] = null;
+        return a;
+    }
+```
+
+- get
+
+![image-20230826130154113](/Users/user/Library/Application Support/typora-user-images/image-20230826130154113.png)
+
+先看看父类的方法，父类定义为抽象方法，需要子类实现
+
+```java
+    /**
+     *
+     * @throws IndexOutOfBoundsException {@inheritDoc}
+     */
+    abstract public E get(int index);
 ```
 
