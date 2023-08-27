@@ -1859,7 +1859,7 @@ public interface Spliterator<T> {
 
 - isEmpty方法
 
-![image-20230826120154681](/Users/user/Library/Application Support/typora-user-images/image-20230826120154681.png)
+![image-20230826120154681](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/0f9cba848ccfe37f55c8b2091cf6c96e.png)
 
 isEmpty方法继承并且重写了AbstractCollection中的方法
 
@@ -1890,7 +1890,7 @@ public boolean isEmpty() {
 
 - contains
 
-![image-20230826120453456](/Users/user/Library/Application Support/typora-user-images/image-20230826120453456.png)
+![image-20230826120453456](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/f1739236edfdc4c700af8556cb370735.png)
 
 
 
@@ -1928,7 +1928,7 @@ public boolean contains(Object o) {
 
 - indexOf
 
-![image-20230826120955473](/Users/user/Library/Application Support/typora-user-images/image-20230826120955473.png)
+![image-20230826120955473](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/0f1b98f610d0c3c46f5665a1826b9768.png)
 
 indexOf方法继承自AbstractList
 
@@ -1976,7 +1976,7 @@ indexOf方法继承自AbstractList
 
 - LastIndexOf
 
-![image-20230826121458695](/Users/user/Library/Application Support/typora-user-images/image-20230826121458695.png)
+![image-20230826121458695](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/4e9c726ea7122117923338363cfe20d2.png)
 
 本方法继承自AbstractList并且做了重写
 
@@ -2017,7 +2017,7 @@ indexOf方法继承自AbstractList
 
 - toArray
 
-![image-20230826122007740](/Users/user/Library/Application Support/typora-user-images/image-20230826122007740.png)
+![image-20230826122007740](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/82da993bc2a10d100e30dad6d8a4f7b9.png)
 
 继承自AbstractCollection
 
@@ -2057,7 +2057,7 @@ public Object[] toArray() {
 
 - toArray(T[] a)
 
-![image-20230826122633633](/Users/user/Library/Application Support/typora-user-images/image-20230826122633633.png)
+![image-20230826122633633](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/82da993bc2a10d100e30dad6d8a4f7b9.png)
 
 toArray方法的重载
 
@@ -2110,7 +2110,7 @@ public <T> T[] toArray(T[] a) {
 
 - get
 
-![image-20230826130154113](/Users/user/Library/Application Support/typora-user-images/image-20230826130154113.png)
+![image-20230826130154113](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/f1da186601eacdcc4a5924bc29a2cdb9.png)
 
 先看看父类的方法，父类定义为抽象方法，需要子类实现
 
@@ -2134,7 +2134,7 @@ public <T> T[] toArray(T[] a) {
 
 - set
 
-![image-20230827101537000](/Users/user/Library/Application Support/typora-user-images/image-20230827101537000.png)
+![image-20230827101537000](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/a6733fcdcd4c40df4cc7810335109e91.png)
 
 本方法是List接口定义的。是List独有的方法，List接口中的定义如下
 
@@ -2144,7 +2144,7 @@ E set(int index, E element);
 
 紧接着，在AbstractList中对其进行了实现，但是默认的实现是直接抛出UnSupported异常
 
-![image-20230827102013553](/Users/user/Library/Application Support/typora-user-images/image-20230827102013553.png)
+![image-20230827102013553](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/38b223308c5a1a7ed7ff350685c735a9.png)
 
 ```java
 public void add(int index, E element) {
