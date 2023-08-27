@@ -2122,3 +2122,93 @@ public <T> T[] toArray(T[] a) {
     abstract public E get(int index);
 ```
 
+子类实现
+
+```java
+    public E get(int index) {
+        rangeCheck(index);//检查越界
+
+        return elementData(index); //对访问数组元素的方法封装
+    }
+```
+
+- set
+
+![image-20230827101537000](/Users/user/Library/Application Support/typora-user-images/image-20230827101537000.png)
+
+本方法是List接口定义的。是List独有的方法，List接口中的定义如下
+
+```java
+E set(int index, E element);
+```
+
+紧接着，在AbstractList中对其进行了实现，但是默认的实现是直接抛出UnSupported异常
+
+![image-20230827102013553](/Users/user/Library/Application Support/typora-user-images/image-20230827102013553.png)
+
+```java
+public void add(int index, E element) {
+        throw new UnsupportedOperationException();
+    }
+```
+
+再来看看ArrayList的实现
+
+```java
+  public void add(int index, E element) {
+        rangeCheckForAdd(index); //检查越界
+
+        ensureCapacityInternal(size + 1);  // Increments modCount!! 动态扩容，并且会让modCount加一
+        System.arraycopy(elementData, index, elementData, index + 1,
+                         size - index);
+        elementData[index] = element;
+        size++;
+    }
+```
+
+
+
+```java
+ private void ensureCapacityInternal(int minCapacity) {
+        ensureExplicitCapacity(calculateCapacity(elementData, minCapacity));
+    }
+
+   private static int calculateCapacity(Object[] elementData, int minCapacity) {//计算容量
+        if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) { 
+          // 如果当前的数组引用是DEFAULTCAPACITY_EMPTY_ELEMENTDATA， 那么说明当前为空数组
+            return Math.max(DEFAULT_CAPACITY, minCapacity);
+          //返回默认数组大小与传入的minCapacity较大的值
+        }
+        return minCapacity;
+    }
+
+  private void ensureExplicitCapacity(int minCapacity) {
+        modCount++; //修改计数加一
+
+        // overflow-conscious code
+        if (minCapacity - elementData.length > 0) //如果传入的minCapacity大于当前数组的长度那么执行扩容
+            grow(minCapacity);
+    }
+
+   private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;//得到旧的容量
+        int newCapacity = oldCapacity + (oldCapacity >> 1); //计算新的容量，（可能存在溢出的情况）
+        if (newCapacity - minCapacity < 0) //如果说newCapacity减去minCapacity小于0，说明已经溢出了
+            newCapacity = minCapacity; // 设置newCapacity为minCapacity
+        if (newCapacity - MAX_ARRAY_SIZE > 0) //如果newCapacity没有溢出，并且
+            newCapacity = hugeCapacity(minCapacity);
+        // minCapacity is usually close to size, so this is a win:
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
+    }
+```
+
