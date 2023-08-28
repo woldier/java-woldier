@@ -203,7 +203,7 @@ public interface Collection<E> extends Iterable<E> {
 
 继承了来自于`Iterable<E>`
 
-![image-20230816182642345](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230816182642345.png)
+![image-20230816182642345](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/f24c7e1c738c6c59853e678e986ef16e.png)
 
 
 
@@ -533,7 +533,7 @@ AbstractList的结构相较于前面的类更加的复杂,因此本小结准备�
 
 先给个总体的图
 
-![image-20230818105818230](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20230818105818230.png)
+![image-20230818105818230](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/f652cf40cb81bdc62b734693453c9b49.png)
 
 
 
@@ -2132,7 +2132,7 @@ public <T> T[] toArray(T[] a) {
     }
 ```
 
-- set
+- set(int index, E element)
 
 ![image-20230827101537000](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/a6733fcdcd4c40df4cc7810335109e91.png)
 
@@ -2147,8 +2147,36 @@ E set(int index, E element);
 ![image-20230827102013553](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/38b223308c5a1a7ed7ff350685c735a9.png)
 
 ```java
-public void add(int index, E element) {
+    public E set(int index, E element) {
         throw new UnsupportedOperationException();
+    }
+```
+
+再来看看ArrayList的实现
+
+```java
+    public E set(int index, E element) {
+        rangeCheck(index); //检查越界
+
+        E oldValue = elementData(index); //得到旧的索引位置元素值
+        elementData[index] = element; //用新的元素代替
+        return oldValue; //返回旧的值
+    }
+```
+
+- add(int index, E element)
+
+![image-20230828153604214](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/8ebf0838e61ef15116b6bc3d5df8dc79.png)
+
+实现了List接口,同时继承,并且重写了AbstractList的方法
+
+```java
+    void add(int index, E element); //List接口中的方法
+```
+
+```java
+public void add(int index, E element) {
+        throw new UnsupportedOperationException(); //AbstractList的方法抛出异常
     }
 ```
 
@@ -2160,7 +2188,7 @@ public void add(int index, E element) {
 
         ensureCapacityInternal(size + 1);  // Increments modCount!! 动态扩容，并且会让modCount加一
         System.arraycopy(elementData, index, elementData, index + 1,
-                         size - index);
+                         size - index);  //元素右移腾出位置
         elementData[index] = element;
         size++;
     }
@@ -2196,7 +2224,7 @@ public void add(int index, E element) {
         int newCapacity = oldCapacity + (oldCapacity >> 1); //计算新的容量，（可能存在溢出的情况）
         if (newCapacity - minCapacity < 0) //如果说newCapacity减去minCapacity小于0，说明已经溢出了
             newCapacity = minCapacity; // 设置newCapacity为minCapacity
-        if (newCapacity - MAX_ARRAY_SIZE > 0) //如果newCapacity没有溢出，并且
+        if (newCapacity - MAX_ARRAY_SIZE > 0) //如果newCapacity没有溢出，并且超过了预设的MAX_ARRAY_SIZE
             newCapacity = hugeCapacity(minCapacity);
         // minCapacity is usually close to size, so this is a win:
         elementData = Arrays.copyOf(elementData, newCapacity);
@@ -2206,9 +2234,269 @@ public void add(int index, E element) {
     private static int hugeCapacity(int minCapacity) {
         if (minCapacity < 0) // overflow
             throw new OutOfMemoryError();
-        return (minCapacity > MAX_ARRAY_SIZE) ?
+        return (minCapacity > MAX_ARRAY_SIZE) ?  //如果没有溢出,且比MAX_ARRAY_SIZE大,那么返回最大整数,否则返回MAX_ARRAY_SIZE
             Integer.MAX_VALUE :
             MAX_ARRAY_SIZE;
+    }
+```
+
+
+
+- add(E e)
+
+![image-20230828162413312](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/e84d541ead51d57060c8bcd8383cb0fa.png)
+
+在List接口中查看该方法,可以发现它又继承自Collection接口,只是重新声明了一次
+
+![image-20230828162617297](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/e9ec6df4c419242bf5839dcafc1fa81a.png)
+
+```java
+    boolean add(E e);
+```
+
+紧接着看看AbstractList中的add(E e)方法:
+
+![image-20230828162732108](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/e8972016c5adcad80c0f6c23c3f15695.png)
+
+该方法实现了List接口,同时继承并且重写了AbstractCollection中的add方法
+
+对于AbstractCollection中的add方法 其实现了Collection接口 ,默认抛出异常.
+
+![image-20230828162849475](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/128b5458f1f18fce3062b1a901f2d6f0.png)
+
+接下来看看AbstractCollection的实现, 其思路是直接调用add(int index, E element).
+
+```java
+   public boolean add(E e) {
+        add(size(), e);
+        return true;
+    }
+```
+
+
+
+最后来看看ArrayList 的实现 ,由于ArrayList 内部维护的是一个数组,因此 可以直接访问对应位置元素.
+
+```java
+    public boolean add(E e) {
+        ensureCapacityInternal(size + 1);  // Increments modCount!! 动态扩容
+        elementData[size++] = e;
+        return true;
+    }
+```
+
+
+
+- remove(int index)
+
+![image-20230828163412857](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/1a5f874ef5951637dae8b17e323037ec.png)
+
+
+
+remove方法实现了List接口的方法,并且实现了AbstractList定义的抽象方法(这里是idea显示错误,其实AbstractList已经实现了该方法). 
+
+
+
+先去看看List接口,相对于继承的Collection中的众多方法 该方法是List接口拓展的
+
+```java
+    E remove(int index);
+```
+
+然后再来看看AbstractList中的方法, 该方法实现了List接口的remove方法, 默认实现抛出异常
+
+![image-20230828163919044](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/e8c2dfea131e0eb820991de52996ead2.png)
+
+```java
+ public E remove(int index) {
+        throw new UnsupportedOperationException();
+    }
+```
+
+
+
+最后,来看看ArrayList的实现
+
+```java
+    public E remove(int index) {
+        rangeCheck(index); //检查index合法性
+
+        modCount++; // modify次数增加
+        E oldValue = elementData(index); //得到待删除的值
+
+        int numMoved = size - index - 1; //计算待移动的元素个数
+        if (numMoved > 0) //如果待移动的元素个数大于零,那么做数组拷贝
+            System.arraycopy(elementData, index+1, elementData, index,
+                             numMoved);
+        elementData[--size] = null; // clear to let GC do its work 如果不做这件事,那么数组中对对象的引用依旧是存在的,那么不会被垃圾回收
+
+        return oldValue;
+    }
+```
+
+
+
+- remove(Object o)
+
+![image-20230828165241379](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/d2005d163d1188b9b80aa8236f040070.png)
+
+先看看List接口中的方法
+
+![image-20230828165650768](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/9cf4f365e02bf8524628cd9375e42c5b.png)
+
+可以发现,其继承了Collection中的remove方法,并且重写声明了该方法.
+
+
+
+再来看看AbstractList中的方法,其实现了List的接口,那么其继承结构与前面类似.
+
+AbstractList中的算法思想是使用迭代器, 前面的章节已经介绍过,因此这么不在做过多的赘述;
+
+```java
+    public boolean remove(Object o) {
+        Iterator<E> it = iterator();
+        if (o==null) {
+            while (it.hasNext()) {
+                if (it.next()==null) {
+                    it.remove();
+                    return true;
+                }
+            }
+        } else {
+            while (it.hasNext()) {
+                if (o.equals(it.next())) {
+                    it.remove();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+```
+
+最后看一下ArrayList中的实现
+
+```java
+    public boolean remove(Object o) {
+        if (o == null) {
+            for (int index = 0; index < size; index++)
+                if (elementData[index] == null) {
+                    fastRemove(index);
+                    return true;
+                }
+        } else {
+            for (int index = 0; index < size; index++)
+                if (o.equals(elementData[index])) {
+                    fastRemove(index);
+                    return true;
+                }
+        }
+        return false;
+    }
+
+
+    /*
+     * Private remove method that skips bounds checking and does not
+     * return the value removed.
+     */
+    private void fastRemove(int index) {
+        modCount++;
+        int numMoved = size - index - 1;
+        if (numMoved > 0)
+            System.arraycopy(elementData, index+1, elementData, index,
+                             numMoved);
+        elementData[--size] = null; // clear to let GC do its work
+    }
+```
+
+
+
+- clear()
+
+对于该方法Collection,AbstractCollection,List,AbstractList接口都定义或者是实现了该方法
+
+先看看Collection方法
+
+```java
+public interface Collection<E> extends Iterable<E> {
+    void clear();
+```
+
+接着看看AbstractCollection
+
+```java
+public abstract class AbstractCollection<E> implements Collection<E> {
+    public void clear() {
+        Iterator<E> it = iterator();
+        while (it.hasNext()) {
+            it.next();
+            it.remove();
+        }
+    }
+
+```
+
+紧接着是继承了Collection接口的List
+
+```java
+public interface List<E> extends Collection<E> {
+    void clear();
+```
+
+然后是继承了AbstractCollection抽象类和List接口的AbstractList
+
+```java
+public abstract class AbstractList<E> extends AbstractCollection<E> implements List<E> {
+   public void clear() {
+        removeRange(0, size());
+    }
+```
+
+最后则是继承了AbstractList并且实现了List接口的实现类
+
+```java
+
+public class ArrayList<E> extends AbstractList<E>
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
+{
+    /**
+     * Removes all of the elements from this list.  The list will
+     * be empty after this call returns.
+     */
+    public void clear() {
+        modCount++; 
+
+        // clear to let GC do its work
+        for (int i = 0; i < size; i++)
+            elementData[i] = null;
+
+        size = 0;
+    }
+
+```
+
+
+
+- addAll(Collection<? extends E> c)
+
+
+
+![image-20230828173449566](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/a782c55e56de501d35dfe2de315a80b1.png)
+
+实现了List的addAll方法,List中的addAll方法又继承自Collection. List接口中只是做了显式的定义. 
+
+![image-20230828173830307](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/a91c6eecfe29f4c617f8ffd1a83fea52.png)
+
+然后看一下AbstractCollection
+
+```java
+public abstract class AbstractCollection<E> implements Collection<E> {
+  public boolean addAll(Collection<? extends E> c) {
+        boolean modified = false;
+        for (E e : c)
+            if (add(e))
+                modified = true;
+        return modified;
     }
 ```
 
