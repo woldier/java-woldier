@@ -52,6 +52,6 @@ public class TestUser {
          * 这里我们模拟一个到exchange的异常 当前exchange的name 是不存在的
          */
         /*正确的 */
-        rabbitTemplate.convertAndSend("boot-confirm","woldier.1","confirm advance",new CorrelationData());
+        rabbitTemplate.convertAndSend("boot-advance-dle","woldier.1","confirm advance",new CorrelationData());
     }
 }
