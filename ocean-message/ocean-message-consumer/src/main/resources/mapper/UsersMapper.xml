@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.woldier.mapper.UsersMapper">
-    <select id="getUsers" resultType="com.woldier.entity.">
-
-        select id,name,phone from ${table_name} order by id limit #{startIndex},#{limitNum};
-
+    <select id="getUsers" resultType="com.woldier.entity.Users">
+        select id,name,phone from ${table_name} order by id limit #{start_index},#{limit_num};
     </select>
 </mapper>

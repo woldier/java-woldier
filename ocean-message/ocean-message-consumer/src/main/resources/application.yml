@@ -1,0 +1,36 @@
+spring:
+#  profiles:
+#    active: dev
+  datasource:
+    url: jdbc:mysql://tencent.woldier.top:3307/ocean?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&autoReconnect=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+  application:
+    #应用名称  向注册中心注册后的名称  非常重要  其他服务可以通过服务名称来调用该服务
+    name: page-advice
+  rabbitmq:
+    host: tencent.woldier.top
+    username: admin
+    password: 123456
+    virtual-host: /woldier
+    port: 5672
+#    publisherConfirms: true #publisherConfirms增强
+    publisherReturns: true #publisherConfirms增强
+
+    listener:
+      simple:
+        #开启ack 为手动
+        acknowledge-mode: manual
+        #设置预取条数为1(设置了与其必须设置手动确认 不然rabbit 本fetch消费完成之后不会发新的fetch)
+        prefetch: 1
+#mybatis配置
+mybatis-plus:
+  #mybatis  mapper文件位置配置
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    #控制台日志输出类配置
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  #别名包配置  简化mapper文件写法
+#  type-aliases-package: com.jyyj.user.enity
+  type-aliases-package: com.woldier.enity
