@@ -18,4 +18,7 @@ public interface UsersMapper extends BaseMapper<Users> {
     List<Users> getUsers(@Param("table_name") String tableName,
                         @Param("start_index") int startIndex,
                         @Param("limit_num") int limitNum);
+
+
+    long count(@Param("table_name") String tableName);
 }

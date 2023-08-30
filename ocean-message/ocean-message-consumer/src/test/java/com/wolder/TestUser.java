@@ -30,7 +30,10 @@ public class TestUser {
     RabbitTemplate rabbitTemplate;
     @Test
     public void test(){
-        usersMappers.getUsers("user01",0,10000);
+        //usersMappers.getUsers("user01",0,10000);
+
+
+        usersMappers.count("user01");
     }
 
 
@@ -63,4 +66,6 @@ public class TestUser {
         /*正确的 */
         rabbitTemplate.convertAndSend("boot-advance-dle","woldier.1",message,new CorrelationData());
     }
+
+
 }
