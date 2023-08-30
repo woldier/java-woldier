@@ -1833,7 +1833,7 @@ public interface Spliterator<T> {
 
 接下来，我们一个一个分析方法，查看继承自哪个类
 
-- size
+##### 1.2.4.4.1 size
 
 ![image-20230826103628973](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/39a4db62caeaabbc21898f7b998d44b7.png)
 
@@ -1857,7 +1857,7 @@ public interface Spliterator<T> {
     }
 ```
 
-- isEmpty方法
+##### 1.2.4.4.2 isEmpty方法
 
 ![image-20230826120154681](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/0f9cba848ccfe37f55c8b2091cf6c96e.png)
 
@@ -1888,7 +1888,7 @@ public boolean isEmpty() {
 
 
 
-- contains
+##### 1.2.4.4.3 contains
 
 ![image-20230826120453456](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/f1739236edfdc4c700af8556cb370735.png)
 
@@ -1926,7 +1926,7 @@ public boolean contains(Object o) {
 
 
 
-- indexOf
+##### 1.2.4.4.4 indexOf
 
 ![image-20230826120955473](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/0f1b98f610d0c3c46f5665a1826b9768.png)
 
@@ -1974,7 +1974,7 @@ indexOf方法继承自AbstractList
     }
 ```
 
-- LastIndexOf
+##### 1.2.4.4.5 LastIndexOf
 
 ![image-20230826121458695](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/4e9c726ea7122117923338363cfe20d2.png)
 
@@ -2015,7 +2015,7 @@ indexOf方法继承自AbstractList
     }
 ```
 
-- toArray
+##### 1.2.4.4.6 toArray
 
 ![image-20230826122007740](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/82da993bc2a10d100e30dad6d8a4f7b9.png)
 
@@ -2055,7 +2055,7 @@ public Object[] toArray() {
 }
 ```
 
-- toArray(T[] a)
+##### 1.2.4.4.7 toArray(T[] a)
 
 ![image-20230826122633633](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/82da993bc2a10d100e30dad6d8a4f7b9.png)
 
@@ -2108,7 +2108,7 @@ public <T> T[] toArray(T[] a) {
     }
 ```
 
-- get
+##### 1.2.4.4.8 get
 
 ![image-20230826130154113](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/f1da186601eacdcc4a5924bc29a2cdb9.png)
 
@@ -2132,7 +2132,7 @@ public <T> T[] toArray(T[] a) {
     }
 ```
 
-- set(int index, E element)
+##### 1.2.4.4.9 set(int index, E element)
 
 ![image-20230827101537000](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/a6733fcdcd4c40df4cc7810335109e91.png)
 
@@ -2164,7 +2164,7 @@ E set(int index, E element);
     }
 ```
 
-- add(int index, E element)
+##### 1.2.4.4.10 add(int index, E element)
 
 ![image-20230828153604214](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/8ebf0838e61ef15116b6bc3d5df8dc79.png)
 
@@ -2242,7 +2242,7 @@ public void add(int index, E element) {
 
 
 
-- add(E e)
+##### 1.2.4.4.11 add(E e)
 
 ![image-20230828162413312](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/e84d541ead51d57060c8bcd8383cb0fa.png)
 
@@ -2287,7 +2287,7 @@ public void add(int index, E element) {
 
 
 
-- remove(int index)
+##### 1.2.4.4.12 remove(int index)
 
 ![image-20230828163412857](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/1a5f874ef5951637dae8b17e323037ec.png)
 
@@ -2336,7 +2336,7 @@ remove方法实现了List接口的方法,并且实现了AbstractList定义的抽
 
 
 
-- remove(Object o)
+##### 1.2.4.4.13 remove(Object o)
 
 ![image-20230828165241379](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/d2005d163d1188b9b80aa8236f040070.png)
 
@@ -2394,7 +2394,6 @@ AbstractList中的算法思想是使用迭代器, 前面的章节已经介绍过
         return false;
     }
 
-
     /*
      * Private remove method that skips bounds checking and does not
      * return the value removed.
@@ -2411,7 +2410,7 @@ AbstractList中的算法思想是使用迭代器, 前面的章节已经介绍过
 
 
 
-- clear()
+##### 1.2.4.4.14 clear()
 
 对于该方法Collection,AbstractCollection,List,AbstractList接口都定义或者是实现了该方法
 
@@ -2477,7 +2476,7 @@ public class ArrayList<E> extends AbstractList<E>
 
 
 
-- addAll(Collection<? extends E> c)
+##### 1.2.4.4.15 addAll(Collection<? extends E> c)
 
 
 
@@ -2487,7 +2486,7 @@ public class ArrayList<E> extends AbstractList<E>
 
 ![image-20230828173830307](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/a91c6eecfe29f4c617f8ffd1a83fea52.png)
 
-然后看一下AbstractCollection
+然后看一下AbstractCollection 内部循环调用的add(e)方法
 
 ```java
 public abstract class AbstractCollection<E> implements Collection<E> {
@@ -2499,4 +2498,20 @@ public abstract class AbstractCollection<E> implements Collection<E> {
         return modified;
     }
 ```
+
+最后看一下ArrayList的实现
+
+```java
+    public boolean add(E e) {
+        ensureCapacityInternal(size + 1);  // Increments modCount!!  动态扩容
+        elementData[size++] = e; //根据数组随机访存的特征进行了优化
+        return true;
+    }
+```
+
+
+
+
+
+
 
