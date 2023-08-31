@@ -2511,6 +2511,281 @@ public abstract class AbstractCollection<E> implements Collection<E> {
 
 
 
+##### 1.2.4.4.16 addAll(int index, Collection<? extends E> c)
+
+![image-20230831090109454](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/d65784116b0265de160bb7709b9b8f3e.png)
+
+本方法是List扩展的方法而不是从Collection接口继承的, 因此未List独有的.
+
+```java
+public interface List<E> extends Collection<E> {
+    boolean addAll(int index, Collection<? extends E> c);
+```
+
+AbstractList实现了List接口, 给出默认的实现(基于迭代器)
+
+```java
+public abstract class AbstractList<E> extends AbstractCollection<E> implements List<E> {
+    public boolean addAll(int index, Collection<? extends E> c) {
+        rangeCheckForAdd(index);
+        boolean modified = false;
+        for (E e : c) {
+            add(index++, e);
+            modified = true;
+        }
+        return modified;
+    }
+```
+
+
+
+最后,再来看看ArrayList中的方法.
+
+```java
+    public boolean addAll(int index, Collection<? extends E> c) {
+        rangeCheckForAdd(index); //检查索引的合法性
+
+        Object[] a = c.toArray(); //转为数组
+        int numNew = a.length; 
+        ensureCapacityInternal(size + numNew);  // Increments modCount
+
+        int numMoved = size - index; //得到需要移动的元素的数量
+        if (numMoved > 0) //移动元素
+            System.arraycopy(elementData, index, elementData, index + numNew,
+                             numMoved);
+
+        System.arraycopy(a, 0, elementData, index, numNew); //拷贝元素
+        size += numNew;
+        return numNew != 0;
+    }
+```
+
+
+
+##### 1.2.4.4.17 removeAll(Collection<?> c)
+
+![image-20230831112800900](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/748161aeab70db97a8d52c0ae8a75ed1.png)
+
+该方法实现了List接口
+
+![image-20230831112911187](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/db7ac7fc86f57c83d1565e60ce66c7ee.png)
+
+而List接口中的RemoveAll方法又继承自Collection中的方法,List只是对其进行了再次的声明.
+
+
+
+对于AbstractCollection 其是西安了Collection中相应的接口, 代码逻辑在 1.1已经介绍过了,这里不再赘述
+
+```java
+    public boolean removeAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        boolean modified = false;
+        Iterator<?> it = iterator();
+        while (it.hasNext()) {
+            if (c.contains(it.next())) {
+                it.remove();
+                modified = true;
+            }
+        }
+        return modified;
+    }
+```
+
+
+
+最后看下ArrayList的实现
+
+```java
+    public boolean removeAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        return batchRemove(c, false);
+    }
+```
+
+
+
+```java
+private boolean batchRemove(Collection<?> c, boolean complement) {
+        final Object[] elementData = this.elementData; //得到内部维护的数组
+        int r = 0, w = 0; //读指针与写指针
+        boolean modified = false;
+        try {
+            for (; r < size; r++)  //读指针每次循环增加
+                //如果c中不包含elementData中的元素,那么写指针也会移动
+                if (c.contains(elementData[r]) == complement)
+                    elementData[w++] = elementData[r];
+        } finally {
+            // Preserve behavioral compatibility with AbstractCollection,
+            // even if c.contains() throws.
+            if (r != size) { //有可能剩余的contains抛出了异常那么需要考虑后续元素的保留
+                System.arraycopy(elementData, r,
+                                 elementData, w,
+                                 size - r);
+                w += size - r;
+            }
+            if (w != size) { //如果w不等于size 说明有元素被删除了 ,那么需要清除后续元素的引用
+                // clear to let GC do its work
+                for (int i = w; i < size; i++)
+                    elementData[i] = null;
+                modCount += size - w;
+                size = w;
+                modified = true;
+            }
+        }
+        return modified;
+    }
+```
+
+##### 1.2.4.4.18 retainAll(Collection<?> c)
+
+![image-20230831142705809](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/8928c4ecead4e3061b1d52712c2ac6d8.png)
+
+实现了List的接口,而list接口中的`retainAll(Collection<?> c)`方法继承自Collection接口,只是List接口将该方法重新定义了
+
+![image-20230831143829078](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/3a317d9dfdcba0b713488bed4f61ed20.png)
+
+
+
+重写并继承了AbstractCollection的方法
+
+```java
+ public boolean retainAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        boolean modified = false;
+        Iterator<E> it = iterator();
+        while (it.hasNext()) {
+            if (!c.contains(it.next())) {
+                it.remove();
+                modified = true;
+            }
+        }
+        return modified;
+    }
+```
+
+最后看下ArrayList中的方法
+
+也是调用的batchRemove 不过第二个参数传入的true,因为之前已经介绍过了batchRemove因此这里不再赘述
+
+```java
+   public boolean retainAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        return batchRemove(c, true);
+    }
+```
+
+##### 1.2.4.4.19 listIterator && iterator
+
+返回不同迭代器的方法
+
+因此放在一起介绍
+
+```java
+public ListIterator<E> listIterator(int index) {
+        if (index < 0 || index > size)
+            throw new IndexOutOfBoundsException("Index: "+index);
+        return new ListItr(index);
+    }
+
+ public ListIterator<E> listIterator() {
+        return new ListItr(0);
+    }
+
+ public Iterator<E> iterator() {
+        return new Itr();
+    }
+```
+
+就是返回了内部的ListItr.class和Itr.class
+
+##### 1.2.4.4.20 subList(int fromIndex, int toIndex)
+
+```java
+public List<E> subList(int fromIndex, int toIndex) {
+    *subListRangeCheck*(fromIndex, toIndex, size);
+    return new SubList(this, 0, fromIndex, toIndex);
+}
+```
+
+
+
+![image-20230831155713868](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/08/7213f7377ca59350ba4682d4cc9604ba.png)
+
+#### 1.2.4.5 重写的Object中的方法
+
+```java
+    public Object clone() {
+        try {
+            ArrayList<?> v = (ArrayList<?>) super.clone();
+            v.elementData = Arrays.copyOf(elementData, size);
+            v.modCount = 0;
+            return v;
+        } catch (CloneNotSupportedException e) {
+            // this shouldn't happen, since we are Cloneable
+            throw new InternalError(e);
+        }
+    }
+```
+
+
+
+#### 1.2.4.6 重写的AbstractList中的方法
+
+AbstractListzh中定义的方法,通过ListItr来完成
+
+```java
+   protected void removeRange(int fromIndex, int toIndex) {
+        ListIterator<E> it = listIterator(fromIndex);
+        for (int i=0, n=toIndex-fromIndex; i<n; i++) {
+            it.next();
+            it.remove();
+        }
+    }
+```
+
+再来看看重写的,直接操作数组
+
+```java
+    protected void removeRange(int fromIndex, int toIndex) {
+        modCount++;
+        int numMoved = size - toIndex;
+        System.arraycopy(elementData, toIndex, elementData, fromIndex,
+                         numMoved);
+
+        // clear to let GC do its work
+        int newSize = size - (toIndex-fromIndex);
+        for (int i = newSize; i < size; i++) {
+            elementData[i] = null;
+        }
+        size = newSize;
+    }
+```
+
+1.2.5.7 重写的Iterable中的方法
+
+```java
+    @Override
+    public void forEach(Consumer<? super E> action) {
+        Objects.requireNonNull(action); //判断action非空
+        final int expectedModCount = modCount; //得到modify的次数
+        @SuppressWarnings("unchecked")
+        final E[] elementData = (E[]) this.elementData; //得到内部维护的数组并且进行类型转换
+        final int size = this.size; //得到size
+        for (int i=0; modCount == expectedModCount && i < size; i++) { //遍历所有的元素,并且jian'k修改
+            action.accept(elementData[i]);
+        }
+        if (modCount != expectedModCount) {
+            throw new ConcurrentModificationException();
+        }
+    }
+```
+
+
+
+
+
+
+
 
 
 
