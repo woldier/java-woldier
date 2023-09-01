@@ -2771,7 +2771,7 @@ AbstractListzh中定义的方法,通过ListItr来完成
         @SuppressWarnings("unchecked")
         final E[] elementData = (E[]) this.elementData; //得到内部维护的数组并且进行类型转换
         final int size = this.size; //得到size
-        for (int i=0; modCount == expectedModCount && i < size; i++) { //遍历所有的元素,并且jian'k修改
+        for (int i=0; modCount == expectedModCount && i < size; i++) { //遍历所有的元素,并且监控修改
             action.accept(elementData[i]);
         }
         if (modCount != expectedModCount) {
