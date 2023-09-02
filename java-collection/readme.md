@@ -2761,7 +2761,7 @@ AbstractListzh中定义的方法,通过ListItr来完成
     }
 ```
 
-1.2.5.7 重写的Iterable中的方法
+#### 1.2.5.7 重写的Iterable中的方法
 
 ```java
     @Override
@@ -2777,6 +2777,66 @@ AbstractListzh中定义的方法,通过ListItr来完成
         if (modCount != expectedModCount) {
             throw new ConcurrentModificationException();
         }
+    }
+```
+
+
+
+#### 1.2.5.8 重写的Collection中的方法
+
+![image-20230902153008149](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/09/915a17b8b1051e067470cc899bcde6dd.png)
+
+```java
+@Override
+    public Spliterator<E> spliterator() {
+        return new ArrayListSpliterator<>(this, 0, -1, 0);
+    }
+```
+
+
+
+```java
+    @Override
+    public boolean removeIf(Predicate<? super E> filter) {
+        Objects.requireNonNull(filter);
+        // figure out which elements are to be removed
+        // any exception thrown from the filter predicate at this stage
+        // will leave the collection unmodified
+        int removeCount = 0;
+        final BitSet removeSet = new BitSet(size);
+        final int expectedModCount = modCount;
+        final int size = this.size;
+        for (int i=0; modCount == expectedModCount && i < size; i++) {
+            @SuppressWarnings("unchecked")
+            final E element = (E) elementData[i];
+            if (filter.test(element)) {
+                removeSet.set(i);
+                removeCount++;
+            }
+        }
+        if (modCount != expectedModCount) {
+            throw new ConcurrentModificationException();
+        }
+
+        // shift surviving elements left over the spaces left by removed elements
+        final boolean anyToRemove = removeCount > 0;
+        if (anyToRemove) {
+            final int newSize = size - removeCount;
+            for (int i=0, j=0; (i < size) && (j < newSize); i++, j++) {
+                i = removeSet.nextClearBit(i);
+                elementData[j] = elementData[i];
+            }
+            for (int k=newSize; k < size; k++) {
+                elementData[k] = null;  // Let gc do its work
+            }
+            this.size = newSize;
+            if (modCount != expectedModCount) {
+                throw new ConcurrentModificationException();
+            }
+            modCount++;
+        }
+
+        return anyToRemove;
     }
 ```
 
