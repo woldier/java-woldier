@@ -2713,6 +2713,8 @@ public List<E> subList(int fromIndex, int toIndex) {
 
 #### 1.2.4.5 重写的Object中的方法
 
+##### 1.2.4.5.1 clone()
+
 ```java
     public Object clone() {
         try {
@@ -2730,6 +2732,8 @@ public List<E> subList(int fromIndex, int toIndex) {
 
 
 #### 1.2.4.6 重写的AbstractList中的方法
+
+##### 1.2.5.6.1 removeRange
 
 AbstractListzh中定义的方法,通过ListItr来完成
 
@@ -2763,6 +2767,8 @@ AbstractListzh中定义的方法,通过ListItr来完成
 
 #### 1.2.5.7 重写的Iterable中的方法
 
+##### 1.2.5.7.1 forEach
+
 ```java
     @Override
     public void forEach(Consumer<? super E> action) {
@@ -2786,6 +2792,8 @@ AbstractListzh中定义的方法,通过ListItr来完成
 
 ![image-20230902153008149](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023/09/915a17b8b1051e067470cc899bcde6dd.png)
 
+##### 1.2.5.8.1 spliterator 
+
 ```java
 @Override
     public Spliterator<E> spliterator() {
@@ -2793,43 +2801,43 @@ AbstractListzh中定义的方法,通过ListItr来完成
     }
 ```
 
-
+##### 1.2.5.8.2 removeIf
 
 ```java
     @Override
-    public boolean removeIf(Predicate<? super E> filter) {
+    public boolean removeIf(Predicate<? super E> filter) { //根据条件过滤元素
         Objects.requireNonNull(filter);
         // figure out which elements are to be removed
         // any exception thrown from the filter predicate at this stage
         // will leave the collection unmodified
-        int removeCount = 0;
-        final BitSet removeSet = new BitSet(size);
-        final int expectedModCount = modCount;
-        final int size = this.size;
-        for (int i=0; modCount == expectedModCount && i < size; i++) {
+        int removeCount = 0; //计数
+        final BitSet removeSet = new BitSet(size); //用于记录那些索引的元素被移除了
+        final int expectedModCount = modCount; //记录modify计数
+        final int size = this.size; //得到当前的size大小
+        for (int i=0; modCount == expectedModCount && i < size; i++) {//判断for循环的结束条件中有modCount == expectedModCount 也就是说,当出现并发修改时,立马就会退出
             @SuppressWarnings("unchecked")
-            final E element = (E) elementData[i];
-            if (filter.test(element)) {
-                removeSet.set(i);
+            final E element = (E) elementData[i]; //强转对象
+            if (filter.test(element)) { //是否满足预测条件
+                removeSet.set(i); //设置对应的bit
                 removeCount++;
             }
         }
-        if (modCount != expectedModCount) {
+        if (modCount != expectedModCount) { //再次检查并发修改
             throw new ConcurrentModificationException();
         }
 
         // shift surviving elements left over the spaces left by removed elements
         final boolean anyToRemove = removeCount > 0;
-        if (anyToRemove) {
-            final int newSize = size - removeCount;
+        if (anyToRemove) { //如果存在被移除的
+            final int newSize = size - removeCount; //计算新的大小
             for (int i=0, j=0; (i < size) && (j < newSize); i++, j++) {
-                i = removeSet.nextClearBit(i);
-                elementData[j] = elementData[i];
+                i = removeSet.nextClearBit(i);//得到下一个未被修改过的索引
+                elementData[j] = elementData[i]; 
             }
-            for (int k=newSize; k < size; k++) {
+            for (int k=newSize; k < size; k++) { //清理后续的元素引用
                 elementData[k] = null;  // Let gc do its work
             }
-            this.size = newSize;
+            this.size = newSize;//设置新的大小
             if (modCount != expectedModCount) {
                 throw new ConcurrentModificationException();
             }
@@ -2842,7 +2850,95 @@ AbstractListzh中定义的方法,通过ListItr来完成
 
 
 
+#### 1.2.5.9 重写的List的方法
 
+![image-20230904152613898](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F6a293321003588beef6ee235088e47bb.png)
+
+##### 1.2.5.9.1 replaceAll
+
+重写了List接口特有的两个接口方法
+
+```java
+    @Override
+    @SuppressWarnings("unchecked")
+    public void replaceAll(UnaryOperator<E> operator) {
+        Objects.requireNonNull(operator);
+        final int expectedModCount = modCount; //记录修改次数
+        final int size = this.size; //大小
+        for (int i=0; modCount == expectedModCount && i < size; i++) {
+            elementData[i] = operator.apply((E) elementData[i]); //调用替代方法
+        }  
+        if (modCount != expectedModCount) { //检查并发修改
+            throw new ConcurrentModificationException();
+        }
+        modCount++;
+    }
+       
+```
+
+##### 1.2.5.9.2 sort
+
+
+
+```java
+    @Override
+    @SuppressWarnings("unchecked")
+    public void sort(Comparator<? super E> c) {
+        final int expectedModCount = modCount; // 并发修改标记位
+        Arrays.sort((E[]) elementData, 0, size, c);  //数组排序
+        if (modCount != expectedModCount) {
+            throw new ConcurrentModificationException();
+        }
+        modCount++;
+    }
+```
+
+
+
+
+
+
+
+到此为止,ArrayList源码就看完了, 其实也不是很复杂.
+
+
+
+### 1.2.4 LinkedList
+
+#### 1.2.4.1 preliminary
+
+
+
+
+
+
+
+
+
+
+
+
+
+> Doubly-linked list implementation of the List and Deque interfaces. Implements all optional list operations, and permits all elements (including null).
+>
+> List与Deque的双向链表实现. 实现了所有可选的list操作以及运行所有元素(允许为null)
+>
+> All of the operations perform as could be expected for a doubly-linked list. Operations that index into the list will traverse the list from the beginning or the end, whichever is closer to the specified index.
+>
+> 对于双链表来说，所有操作的执行情况都与预期一致。索引到列表的操作将从列表开始或结束处开始遍历列表，以更接近指定索引的位置为准。
+>
+> Note that this implementation is not synchronized. If multiple threads access a linked list concurrently, and at least one of the threads modifies the list structurally, it must be synchronized externally. (A structural modification is any operation that adds or deletes one or more elements; merely setting the value of an element is not a structural modification.) This is typically accomplished by synchronizing on some object that naturally encapsulates the list. If no such object exists, the list should be "wrapped" using the Collections.synchronizedList method. This is best done at creation time, to prevent accidental unsynchronized access to the list:
+>     List list = Collections.synchronizedList(new LinkedList(...));
+>
+> 注意到本实现时非线程安全的. 如果多线程并发的访问本链表, 并且超过一个的线程修改list的结构, 那么就必须在外部保持同步. 这通常是通过包裹本list的类来完成同步的. 如果没有这样的类, 那么本list应该调用` Collections.synchronizedList method` 来被包裹. 这个过程必须在创建的时候完成, 以防止偶然的未同步的对list的访问.
+>
+> The iterators returned by this class's iterator and listIterator methods are fail-fast: if the list is structurally modified at any time after the iterator is created, in any way except through the Iterator's own remove or add methods, the iterator will throw a ConcurrentModificationException. Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
+>
+> 本类的迭代器和List迭代器是 遵循`fail-fast`策略: 在创建了迭代器之后, 如果list在任意时间进行了修正(除了是调用迭代器自身的修改方法)将会抛出`ConcurrentModificationException`, 因此, 在面对并发修改时, 迭代器快速-清洁的失败, 而不是冒着随机的, 未定义的行为在任意未来的时间.
+>
+> Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
+>
+> 请注意，无法保证迭代器的快失效行为，因为一般来说，在非同步并发修改的情况下，不可能做出任何硬性保证。快失效迭代器会尽力抛出 ConcurrentModificationException。因此，如果程序的正确性依赖于该异常，那将是错误的：迭代器的快失效行为只能用于检测错误。
 
 
 
