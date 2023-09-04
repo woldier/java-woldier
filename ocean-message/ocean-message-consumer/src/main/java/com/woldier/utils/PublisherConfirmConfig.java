@@ -14,7 +14,7 @@ public class PublisherConfirmConfig {
     private static final String ROUTING_KEY = "woldier.#";
     private static final String DEAD_ROUTING_KEY = "woldier.dead.#";
     //ttl时间(毫秒)
-    private static final int TTL_EXPIRATION = 5000;
+    private static final int TTL_EXPIRATION = 20000;
     /*设置为更大*/
     //private static final int TTL_EXPIRATION = 55000;
 
@@ -43,7 +43,7 @@ public class PublisherConfirmConfig {
          */
         return QueueBuilder.durable(QUEUE_NAME).
 
-                withArgument("x-message-ttl", TTL_EXPIRATION).
+                //withArgument("x-message-ttl", TTL_EXPIRATION).
                 /*
                 How many (ready) messages a queue can contain before it starts to drop them from its head.(Sets the "x-max-length" argument.)
                 设置queue最大容量,超过则会drop队顶数据*/

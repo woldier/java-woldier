@@ -4,4 +4,7 @@
     <select id="getUsers" resultType="com.woldier.entity.Users">
         select id,name,phone from ${table_name} order by id limit #{start_index},#{limit_num};
     </select>
+    <select id="count" resultType="java.lang.Long">
+        select count(*) from ${table_name};
+    </select>
 </mapper>

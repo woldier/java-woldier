@@ -1,4 +1,5 @@
 package com.woldier.utils;
+
 import com.rabbitmq.client.Channel;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -16,8 +17,8 @@ public class ConsumerConfig {
      * @param message
      */
     @RabbitListener(queues = "boot-advance-dle-dead-topic-queue") // queues参数设置队列名称
-    public void Listen(Message message, Channel channel){
-        System.out.println("message = " + message + ", channel = " + channel);
+    public void listen(Message message , Channel channel) throws IOException {
+
         try {
             /*事务操作*/
             System.out.println("message = " + message + ", channel = " + channel);
@@ -30,11 +31,7 @@ public class ConsumerConfig {
             /**
              * 这里设置requeue为false 此消息就会被加入到死信队列
              */
-            try {
-                channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,false);
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
+            channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,false);
         }
     }
 }
