@@ -2907,6 +2907,90 @@ AbstractListzh中定义的方法,通过ListItr来完成
 
 #### 1.2.4.1 preliminary
 
+##### 1.2.4.1.1 Queue接口
+
+```latex
+A collection designed for holding elements prior to processing. Besides basic Collection operations, queues provide additional insertion, extraction, and inspection operations. Each of these methods exists in two forms: one throws an exception if the operation fails, the other returns a special value (either null or false, depending on the operation). The latter form of the insert operation is designed specifically for use with capacity-restricted Queue implementations; in most implementations, insert operations cannot fail. 
+    一个被设计为从前往后持有元素的集合. 除了基础的集合操作, 队列提供额外的插入、提取和检查操作. 每种方法存在两种形式: 一种是执行失败抛出异常,一种则是返回特定的值(可能为null也可能为false, 取决于操作). 后者插入的形式被设计为针对使用特定策略的队列实现. 在大多数的实现中, insert操作不能够失败. 
+Summary of Queue methods
+			Throws exception    Returns special value    
+    Insert   add(e)              offer(e)
+    Remove   remove()            poll()
+    Examine  element()           peek()
+Queues typically, but do not necessarily, order elements in a FIFO (first-in-first-out) manner. Among the exceptions are priority queues, which order elements according to a supplied comparator, or the elements' natural ordering, and LIFO queues (or stacks) which order the elements LIFO (last-in-first-out). 
+Queue典型的是按照FIFO排序元素(但也不是必须). 除此之外则是优先级队列, 其根据提供的比较器,或者元素本身的特征排序元素, 以及LIFO Queue(也称为Stack) 其按照先进后出排序元素
+Whatever the ordering used, the head of the queue is that element which would be removed by a call to remove() or poll(). In a FIFO queue, all new elements are inserted at the tail of the queue. Other kinds of queues may use different placement rules. Every Queue implementation must specify its ordering properties.
+无论使用哪种排序, queue头部的元素将会因为调用remove() 或者 poll()而被移除. 在FIFO queue中, 所有的元素被插入到queue的尾部. 其他类型的queue则会使用不同的替代规则. 每一个queue的实现必须确定其排序特征. 
+The offer method inserts an element if possible, otherwise returning false. This differs from the Collection.add method, which can fail to add an element only by throwing an unchecked exception. The offer method is designed for use when failure is a normal, rather than exceptional occurrence, for example, in fixed-capacity (or "bounded") queues.
+offer方法尽可能的插入元素, 否则的话返回false. 这与集合的策略不同. add方法可以添加元素失败(只通过抛出一个unchecked exception来达到目的).  offer方法被设计用于失败情况是常见的, 而不是偶然性的异常, 几个例子, 如在受约束的(有边界)的queue中.
+The remove() and poll() methods remove and return the head of the queue. Exactly which element is removed from the queue is a function of the queue's ordering policy, which differs from implementation to implementation. The remove() and poll() methods differ only in their behavior when the queue is empty: the remove() method throws an exception, while the poll() method returns null.
+ remove方法和poll方法移除并且返回queue的头部. 具体那个元素被移除取决于queue的偶爱徐策略, 各种实现的策略都不尽相同. remove方法和poll方法仅仅当queue是空的的时候才展现出行为的不同. remove方法抛出异常, 与此同时poll返回空. 
+The element() and peek() methods return, but do not remove, the head of the queue.
+element和peek方法返回队头元素,但是并不移除.
+The Queue interface does not define the blocking queue methods, which are common in concurrent programming. These methods, which wait for elements to appear or for space to become available, are defined in the java.util.concurrent.BlockingQueue interface, which extends this interface.
+Queue implementations generally do not allow insertion of null elements, although some implementations, such as LinkedList, do not prohibit insertion of null. Even in the implementations that permit it, null should not be inserted into a Queue, as null is also used as a special return value by the poll method to indicate that the queue contains no elements.
+queue接口没有定义阻塞队列的方法(这类方法在并发编程中非常的常见). 这类方法(在java.util.concurrent.BlockingQueue接口中被定义,其继承自Queue接口)等待元素的出现或者可用的插入空间. Queue的实现通常不允许插入空元素, 虽然一些实现, 比如说LinkedList没有阻止null的插入. 即使在允许插入null的实现中, null最好不要被插入到queue中, 因为null也特别用于poll方法特定的返回用于指代queue不包含有任何元素.
+Queue implementations generally do not define element-based versions of methods equals and hashCode but instead inherit the identity based versions from class Object, because element-based equality is not always well-defined for queues with the same elements but different ordering properties.
+This interface is a member of the Java Collections Framework.
+queue的实现通常不会定义"基于元素"版本的equals和hashCode方法而是从Object类中继承"基于身份"的版本, 因为对于queue来说"基于元素"的相等对于有着相同的元素却有着不同优先级的,但是不总是能被很好的定义 
+本接口时java集合框架中的一个成员.
+
+```
+
+```java
+public interface Queue<E> extends Collection<E> {
+
+    boolean add(E e);
+
+  
+    boolean offer(E e);
+    
+   
+    E remove();
+
+    
+    E poll();
+
+  
+    E element();
+
+  
+    E peek();
+}
+```
+
+Queue接口继承自Collection, 
+
+
+
+##### 1.2.4.1.2 DeQueue
+
+```latex
+A linear collection that supports element insertion and removal at both ends. The name deque is short for "double ended queue" and is usually pronounced "deck". Most Deque implementations place no fixed limits on the number of elements they may contain, but this interface supports capacity-restricted deques as well as those with no fixed size limit.
+一个支持同时在头部和尾部插入元素的集合. deque 是一个短名"double ended queue" 并且常常发音为"deck". 大多数的Deque的实现对元素的容量没有限制, 但是本接口既支持有界队列也支持无界队列. 
+This interface defines methods to access the elements at both ends of the deque. Methods are provided to insert, remove, and examine the element. Each of these methods exists in two forms: one throws an exception if the operation fails, the other returns a special value (either null or false, depending on the operation). The latter form of the insert operation is designed specifically for use with capacity-restricted Deque implementations; in most implementations, insert operations cannot fail.
+The twelve methods described above are summarized in the following table:
+本接口定义可以访问队头和队尾的元素的方法. 这些方法提供了插入,删除,以及检查元素的功能. 每种方法存在两种形式: 如果操作失败一种抛出异常, 另一种则是返回特定的值(无论是null还是false,取决于操作). 后者插入的形式被设计为针对使用特定策略的队列实现. 在大多数的实现中, insert操作不能够失败. 
+
+
+```
+
+![image-20230905204511177](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fc93eccb130f53685409271fe72234406.png)
+
+> This interface extends the Queue interface. When a deque is used as a queue, FIFO (First-In-First-Out) behavior results. Elements are added at the end of the deque and removed from the beginning. The methods inherited from the Queue interface are precisely equivalent to Deque methods as indicated in the following table:
+>
+> 本接口继承自Queue接口. 当一个Deque被当作一个queue使用时, 那么展现出的是FIFO行为. 队头的元素被移除,新添加的元素则会添加到队尾. 本接口从Queue中继承的方法其实现与Queue应该具有相同的行为. 
+
+![image-20230905212524169](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F26cb24e3a7c4a987bccae80f2a43eec9.png)
+
+> Deques can also be used as LIFO (Last-In-First-Out) stacks. This interface should be used in preference to the legacy Stack class. When a deque is used as a stack, elements are pushed and popped from the beginning of the deque. Stack methods are precisely equivalent to Deque methods as indicated in the table below:
+>
+> Deque可以表现为LIFO(也叫做stack 栈). 本接口应该
+
+
+
+![image-20230905212545389](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fdf1b5225459f736b5fb2c36f184e1d23.png)
+
 
 
 
