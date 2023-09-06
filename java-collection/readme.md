@@ -86,6 +86,27 @@ while(iter.hasNext){
 
 
 
+另,当我看了一部分集合框架的接口类后,发现有些子接口继承并且重新声明了一些父接口的方法, 非常不解为什么需要重新定义一些方法呢, 这些方法不是已经从父接口中继承得到了吗?
+
+查阅了很多资料,没找到相应的解答,最后询问GPT, 得到了我同意的答案.
+
+> java集合框架中子接口继承父接口并且重新声明父接口中的部分抽象方法,其意义是什么呢
+>
+> 
+>
+> ChatGPT
+>
+> 
+>
+> 在Java集合框架中，有一些子接口继承了父接口并且重新声明了父接口中的部分抽象方法，这种设计模式有一些特定的意义和用途。以下是一些可能的理由：
+>
+> 1. 接口的细分：通过继承并重新声明父接口的方法，可以将接口分为更小的功能单元，使接口更加精确地描述其子类型的行为。这有助于提高代码的可维护性和可读性，因为每个子接口都可以更专注于特定的功能领域。
+> 2. 自定义实现：子接口可以根据需要重新声明父接口中的方法，以提供特定于实现类的自定义行为。这允许不同的实现类提供不同的方法实现，以满足其独特的需求。
+> 3. 向后兼容性：通过重新声明父接口的方法，可以确保现有的代码仍然有效，而不会破坏现有的代码。这使得可以向集合框架添加新的功能而不会中断旧代码的正常运行。
+> 4. 强制实现：重新声明父接口的方法可以强制实现类提供对这些方法的具体实现。这对于确保每个实现类都提供了必要的功能非常有用，从而避免了遗漏关键功能的问题。
+>
+> 总之，子接口继承并重新声明父接口的方法是一种有意义的设计选择，它有助于提高代码的模块化性、可维护性和可扩展性，并允许更好地满足不同实现类的需求。这是Java集合框架中使用的一种常见设计模式。
+
 # 1. Collection
 
 写在前面 为什么Java中的Collection类都继承了抽象类还要实现抽象类的接口？
@@ -2935,6 +2956,7 @@ This interface is a member of the Java Collections Framework.
 queue的实现通常不会定义"基于元素"版本的equals和hashCode方法而是从Object类中继承"基于身份"的版本, 因为对于queue来说"基于元素"的相等对于有着相同的元素却有着不同优先级的,但是不总是能被很好的定义 
 本接口时java集合框架中的一个成员.
 
+
 ```
 
 ```java
@@ -2963,7 +2985,7 @@ Queue接口继承自Collection,
 
 
 
-##### 1.2.4.1.2 DeQueue
+##### 1.2.4.1.2 DeQueue接口
 
 ```latex
 A linear collection that supports element insertion and removal at both ends. The name deque is short for "double ended queue" and is usually pronounced "deck". Most Deque implementations place no fixed limits on the number of elements they may contain, but this interface supports capacity-restricted deques as well as those with no fixed size limit.
@@ -2985,23 +3007,232 @@ The twelve methods described above are summarized in the following table:
 
 > Deques can also be used as LIFO (Last-In-First-Out) stacks. This interface should be used in preference to the legacy Stack class. When a deque is used as a stack, elements are pushed and popped from the beginning of the deque. Stack methods are precisely equivalent to Deque methods as indicated in the table below:
 >
-> Deque可以表现为LIFO(也叫做stack 栈). 本接口应该
+> Deque可以表现为LIFO(也叫做stack 栈). 本接口应该应该被用于表现出策略的Stack. 当一个deque被当作stack使用, 元素的插入与弹出都在队列的头部.  Stack中的方法与Deque中的方法的等价关系如下:
 
 
 
 ![image-20230905212545389](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fdf1b5225459f736b5fb2c36f184e1d23.png)
 
+> This interface provides two methods to remove interior elements, removeFirstOccurrence and removeLastOccurrence.
+>
+> 本接口提供两个方法用于删除元素, `removeFirstOccurrence` 和`removeLastOccurrence`.
+>
+> Unlike the List interface, this interface does not provide support for indexed access to elements.
+>
+> 与List接口不同, 本接口并不支持随机访问元素.
+>
+> While Deque implementations are not strictly required to prohibit the insertion of null elements, they are strongly encouraged to do so. Users of any Deque implementations that do allow null elements are strongly encouraged not to take advantage of the ability to insert nulls. This is so because null is used as a special return value by various methods to indicated that the deque is empty.
+>
+> 虽然Deque实现并没有规定需要阻止null元素的插入, 但是强烈建议这样做. 我们强烈建议任何允许空元素的 Deque 实现的用户不要利用插入空元素的功能。这是因为各种方法都将 null 用作特殊的返回值，以表示 Deque 为空。
+>
+> Deque implementations generally do not define element-based versions of the equals and hashCode methods, but instead inherit the identity-based versions from class Object.
+> This interface is a member of the Java Collections Framework.
+
+先来看看Deque的整体结构
+
+![image-20230906082114902](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fb60deb7c4b08a164caac32c58af2fb40.png)
+
+可以看到其重声明了Queue中的所有方法,除此之外其重声明了Collection中的一些方法. 
 
 
 
+最后便是Deque扩展的方法了.
+
+```java
+public interface Deque<E> extends Queue<E> {
+
+        void addFirst(E e); //队头添加
+        void addLast(E e); //队尾添加
+        boolean offerFirst(E e); //队头添加(阻塞)
+        boolean offerLast(E e);//队尾添加(阻塞)
+        E removeFirst(); //移除队头元素,抛异常
+        E removeLast(); //移除队尾元素,抛异常
+        E pollFirst();//移除队头元素(阻塞)
+        E pollLast(); //移除队尾(阻塞)
+        E pollFirst();
+        E pollLast();
+        E getFirst();
+        E getLast();
+        E peekFirst();
+        E peekLast();
+        void push(E e);
+        E pop();
+```
 
 
 
+还有的方法我看了下它的注释
+
+```latex
+     /**
+     * Removes the first occurrence of the specified element from this deque.
+     * If the deque does not contain the element, it is unchanged.
+     * 移除当前第一个特定的元素, 如果Deque不包含对应的元素, 那么不会发送改变. 
+     * More formally, removes the first element {@code e} such that
+     * <tt>(o==null&nbsp;?&nbsp;e==null&nbsp;:&nbsp;o.equals(e))</tt>
+     * (if such an element exists).
+     * 更一般的, 移除第一个e元素(满足 o==null?e==null:o.equals(e))
+     * Returns {@code true} if this deque contained the specified element
+     * (or equivalently, if this deque changed as a result of the call).
+     * 返回true如果本deque确实含有特定的元素.
+     * @param o element to be removed from this deque, if present
+     * @return {@code true} if an element was removed as a result of this call
+     * @throws ClassCastException if the class of the specified element
+     *         is incompatible with this deque
+     * (<a href="Collection.html#optional-restrictions">optional</a>)
+     * @throws NullPointerException if the specified element is null and this
+     *         deque does not permit null elements
+     * (<a href="Collection.html#optional-restrictions">optional</a>)
+     */
+    boolean removeFirstOccurrence(Object o);
+    
+    /** 本方法其定义与上文差不多,不过是移除队尾,不再赘述
+     * Removes the last occurrence of the specified element from this deque.
+     * If the deque does not contain the element, it is unchanged.
+     * More formally, removes the last element {@code e} such that
+     * <tt>(o==null&nbsp;?&nbsp;e==null&nbsp;:&nbsp;o.equals(e))</tt>
+     * (if such an element exists).
+     * Returns {@code true} if this deque contained the specified element
+     * (or equivalently, if this deque changed as a result of the call).
+     *
+     * @param o element to be removed from this deque, if present
+     * @return {@code true} if an element was removed as a result of this call
+     * @throws ClassCastException if the class of the specified element
+     *         is incompatible with this deque
+     * (<a href="Collection.html#optional-restrictions">optional</a>)
+     * @throws NullPointerException if the specified element is null and this
+     *         deque does not permit null elements
+     * (<a href="Collection.html#optional-restrictions">optional</a>)
+     */
+    boolean removeLastOccurrence(Object o);
+```
 
 
 
+```java
+    /**
+     * Pushes an element onto the stack represented by this deque (in other
+     * words, at the head of this deque) if it is possible to do so
+     * immediately without violating capacity restrictions, throwing an
+     * {@code IllegalStateException} if no space is currently available.
+     * 将一个元素放入到将此deque作为stack的集合中(换句话说, 放入队头), 如果说这个操作可以立即完成而没有违反
+     * 容量的限制, 如果没有可用的容量那么则抛出IllegalStateException
+     * <p>This method is equivalent to {@link #addFirst}.
+     * 本方法等同于addFirst
+     * @param e the element to push
+     * @throws IllegalStateException if the element cannot be added at this
+     *         time due to capacity restrictions
+     * @throws ClassCastException if the class of the specified element
+     *         prevents it from being added to this deque
+     * @throws NullPointerException if the specified element is null and this
+     *         deque does not permit null elements
+     * @throws IllegalArgumentException if some property of the specified
+     *         element prevents it from being added to this deque
+     */
+    void push(E e);
+
+    /**
+     * Pops an element from the stack represented by this deque.  In other
+     * words, removes and returns the first element of this deque.
+     * 弹出栈顶的元素, 换句话说, 移除并且返回队头的元素
+     * <p>This method is equivalent to {@link #removeFirst()}.
+     * 本方法与removeFirst()方法等同
+     * @return the element at the front of this deque (which is the top
+     *         of the stack represented by this deque)
+     * @throws NoSuchElementException if this deque is empty
+     */
+    E pop();
+```
+
+##### 1.2.4.1.3 AbstractSequentialList
+
+> This class provides a skeletal implementation of the List interface to minimize the effort required to implement this interface backed by a "sequential access" data store (such as a linked list). For random access data (such as an array), AbstractList should be used in preference to this class.
+>
+> 本类提供了一个List接口的骨架实现,以最小化实现一个序列化顺序化(或者说是链表化)的数据访问与存储实现所需要做出的努力. 如果考虑随机存取, 那么应该先考虑AbstractList而不是本类. 
+>
+> This class is the opposite of the AbstractList class in the sense that it implements the "random access" methods (get(int index), set(int index, E element), add(int index, E element) and remove(int index)) on top of the list's list iterator, instead of the other way around.
+>
+> 本类站在Abstract类中方法 (get(int index), set(int index, E element), add(int index, E element) and remove(int index)) 随机访问元素期望的对立面, 而是通过list迭代器完成对相应位置元素的索引. 
+>
+> To implement a list the programmer needs only to extend this class and provide implementations for the listIterator and size methods. For an unmodifiable list, the programmer need only implement the list iterator's hasNext, next, hasPrevious, previous and index methods.
+>
+> 为了实现本抽象类,编程者只需要继承本类并且提供listIterator和size方法的实现. 对于一个不能更改的list, 编程者只需要实现迭代器中的hasNext, next, hasPrevious, previous and index方法.
+>
+> For a modifiable list the programmer should additionally implement the list iterator's set method. For a variable-size list the programmer should additionally implement the list iterator's remove and add methods.
+> The programmer should generally provide a void (no argument) and collection constructor, as per the recommendation in the Collection interface specification.
+>
+> 对于一个可被修改的list实现,编程者需要额外的实现list迭代器中的set方法. 对于大小可变的list,需要额外实现remove和add方法. 
+>
+> 编程者通常需要提供一个无参的构造函数,以及一个参数的构造函数.
 
 
+
+![image-20230906110843761](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fbb3bfc67718d4cc269a9cc0b78467c8b.png)
+
+```java
+   public E get(int index) {  //获取对应位置的元素
+        try {
+            return listIterator(index).next(); //初始化一个ListIterator ,然后调用next得到当前索引位置的元素
+        } catch (NoSuchElementException exc) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+
+    public E set(int index, E element) {  //设置对应位置的元素
+        try {
+            ListIterator<E> e = listIterator(index);  //初始化itr
+            E oldVal = e.next(); //得到当前索引位置的元素(即旧的值)
+            e.set(element); //设置对应索引的元素
+            return oldVal; //返回旧的值
+        } catch (NoSuchElementException exc) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+
+    public void add(int index, E element) { //添加元素
+        try {
+            listIterator(index).add(element); //初始化一个listItr到对应索引然后执行add操作
+        } catch (NoSuchElementException exc) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+
+ 	public E remove(int index) {  //删除
+        try {
+            ListIterator<E> e = listIterator(index);  //初始化
+            E outCast = e.next();
+            e.remove();
+            return outCast;
+        } catch (NoSuchElementException exc) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+    public boolean addAll(int index, Collection<? extends E> c) {
+        try {
+            boolean modified = false;
+            ListIterator<E> e1 = listIterator(index);
+            Iterator<? extends E> e2 = c.iterator();
+            while (e2.hasNext()) {
+                e1.add(e2.next());
+                modified = true;
+            }
+            return modified;
+        } catch (NoSuchElementException exc) {
+            throw new IndexOutOfBoundsException("Index: "+index);
+        }
+    }
+
+    public Iterator<E> iterator() {
+        return listIterator();
+    }
+
+
+    public abstract ListIterator<E> listIterator(int index);
+```
+
+对于listIterator方法 在AbstractList中是已经实现了的, 但是本抽象类中再次将其定义为了抽象方法.
+
+#### 1.2.4.2 LinkedList
 
 > Doubly-linked list implementation of the List and Deque interfaces. Implements all optional list operations, and permits all elements (including null).
 >
@@ -3023,6 +3254,375 @@ The twelve methods described above are summarized in the following table:
 > Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
 >
 > 请注意，无法保证迭代器的快失效行为，因为一般来说，在非同步并发修改的情况下，不可能做出任何硬性保证。快失效迭代器会尽力抛出 ConcurrentModificationException。因此，如果程序的正确性依赖于该异常，那将是错误的：迭代器的快失效行为只能用于检测错误。
+
+看一下自己拓展的3个属性
+
+```java
+    transient int size = 0;
+
+    /**
+     * Pointer to first node.
+     * Invariant: (first == null && last == null) ||
+     *            (first.prev == null && first.item != null)
+     */
+    transient Node<E> first;
+    /**
+     * Pointer to last node.
+     * Invariant: (first == null && last == null) ||
+     *            (last.next == null && last.item != null)
+     */
+    transient Node<E> last;
+
+```
+
+#### 1.2.4.2 Node内部类
+
+
+
+```java
+    private static class Node<E> {
+        E item;
+        Node<E> next; 
+        Node<E> prev;
+
+        Node(Node<E> prev, E element, Node<E> next) {
+            this.item = element;
+            this.next = next;
+            this.prev = prev;
+        }
+    }
+```
+
+#### 1.2.4.3 ListItr 内部类
+
+```java
+    private class ListItr implements ListIterator<E> {
+        private Node<E> lastReturned; //最近返回的
+        private Node<E> next; //指向索引的指针
+        private int nextIndex; //索引
+        private int expectedModCount = modCount ; //记录的modify count
+
+        ListItr(int index) {
+            // assert isPositionIndex(index);
+            next = (index == size) ? null : node(index); //调用的node方法会返回对应索引位置的node,如果索引不合法那么返回的也是null , 将其抽取出来也是出于通用性考虑,有的实现可能并不想要哨兵节点,那么这样整个ListItr类都需要重写了.
+            nextIndex = index; //当前的索引
+        }
+
+        public boolean hasNext() { //是否还有下一个元素
+            return nextIndex < size; 
+        }
+
+        public E next() {
+            checkForComodification(); //检查并发修改
+            if (!hasNext()) //检查是否还有下一个元素
+                throw new NoSuchElementException();
+
+            lastReturned = next; //记录最近返回的
+            next = next.next; //得到下一个
+            nextIndex++; //索引加一
+            return lastReturned.item;
+        }
+
+        public boolean hasPrevious() {
+            return nextIndex > 0;
+        }
+
+        public E previous() {
+            checkForComodification(); //检查并发修改
+            if (!hasPrevious()) //检查是否有前驱
+                throw new NoSuchElementException();
+
+            lastReturned = next = (next == null) ? last : next.prev; 
+            nextIndex--;
+            return lastReturned.item;
+        }
+
+        public int nextIndex() {
+            return nextIndex;
+        }
+
+        public int previousIndex() {
+            return nextIndex - 1;
+        }
+
+        public void remove() {
+            checkForComodification(); //检查并发修改
+            if (lastReturned == null)
+                throw new IllegalStateException();
+
+            Node<E> lastNext = lastReturned.next; //记录最近返回元素的后继
+            unlink(lastReturned); //断开
+            if (next == lastReturned) //如果当前的next 指针指向的是lastReturned(此情况在向前走的时候出现)
+                next = lastNext; //重新设置next,如果不这样做,那么则出现了断链
+            else //否则的话,说明是从前向后走的(调用的next方法)
+                nextIndex--; //索引减一
+            lastReturned = null; //设置lastReturned 防止多次删除
+            expectedModCount++; // 保存的modifyCount加一
+        }
+
+        public void set(E e) {
+            if (lastReturned == null)
+                throw new IllegalStateException();
+            checkForComodification();
+            lastReturned.item = e;
+        }
+
+        public void add(E e) {
+            checkForComodification();
+            lastReturned = null;  //设置lastReturn等于null ,防止再调用remove方法
+            if (next == null)  //如果索引的位置是size 那么则为null
+                linkLast(e); //那么在尾部插入
+            else //否则的话则是在当前元素的前面插入
+                linkBefore(e, next); //把e插入当前元素之前
+            nextIndex++; //索引加一
+            expectedModCount++;
+        }
+
+        public void forEachRemaining(Consumer<? super E> action) {
+            Objects.requireNonNull(action);
+            while (modCount == expectedModCount && nextIndex < size) {
+                action.accept(next.item);
+                lastReturned = next;
+                next = next.next;
+                nextIndex++;
+            }
+            checkForComodification(); //最后连进行检查并发修改
+        }
+
+        final void checkForComodification() {
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+        }
+    }
+```
+
+#### 1.2.4.4 DescendingIterator内部类
+
+````java
+    private class DescendingIterator implements Iterator<E> {
+        private final ListItr itr = new ListItr(size());
+        public boolean hasNext() {
+            return itr.hasPrevious();
+        }
+        public E next() {
+            return itr.previous();
+        }
+        public void remove() {
+            itr.remove();
+        }
+    }
+````
+
+#### 1.2.4.5 LLSpliterator
+
+```java
+    static final class LLSpliterator<E> implements Spliterator<E> {
+        static final int BATCH_UNIT = 1 << 10;  // batch array size increment  一个batch 的大小
+        static final int MAX_BATCH = 1 << 25;  // max batch array size; 最大的batch数目
+        final LinkedList<E> list; // null OK unless traversed 可以为null 直到开始遍历
+        Node<E> current;      // current node; null until initialized  当前node
+        int est;              // size estimate; -1 until first needed size的估计值
+        int expectedModCount; // initialized when est set  期望的modify count
+        int batch;            // batch size for splits 
+
+        LLSpliterator(LinkedList<E> list, int est, int expectedModCount) {
+            this.list = list;
+            this.est = est;
+            this.expectedModCount = expectedModCount;
+        }
+
+        final int getEst() {
+            int s; // force initialization
+            final LinkedList<E> lst;
+            if ((s = est) < 0) { //如果est为-1,说明没有经过初始化,那么初始化,否则if条件不成立
+                if ((lst = list) == null) //判断list是否为null
+                    s = est = 0; //为null 设置est为0
+                else { //如果不为null
+                    expectedModCount = lst.modCount; //设置modCount
+                    current = lst.first;  //设置当前节点为lst的头指针
+                    s = est = lst.size; //设置est size
+                }
+            }
+            return s;
+        }
+
+        public long estimateSize() { return (long) getEst(); }
+
+        public Spliterator<E> trySplit() { //尝试分割
+            Node<E> p; //声明一个暂存指针p
+            int s = getEst(); //得到size
+            if (s > 1 && (p = current) != null) { //如果s大于1并且 current指针指向的不是null
+                int n = batch + BATCH_UNIT; //得到
+                if (n > s)
+                    n = s;
+                if (n > MAX_BATCH)
+                    n = MAX_BATCH;
+                Object[] a = new Object[n];
+                int j = 0;
+                do { a[j++] = p.item; } while ((p = p.next) != null && j < n);
+                current = p;
+                batch = j;
+                est = s - j;
+                return Spliterators.spliterator(a, 0, j, Spliterator.ORDERED);
+            }
+            return null;
+        }
+
+        public void forEachRemaining(Consumer<? super E> action) {
+            Node<E> p; int n;
+            if (action == null) throw new NullPointerException();
+            if ((n = getEst()) > 0 && (p = current) != null) {
+                current = null;
+                est = 0;
+                do {
+                    E e = p.item;
+                    p = p.next;
+                    action.accept(e);
+                } while (p != null && --n > 0);
+            }
+            if (list.modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+        }
+
+        public boolean tryAdvance(Consumer<? super E> action) {
+            Node<E> p;
+            if (action == null) throw new NullPointerException();
+            if (getEst() > 0 && (p = current) != null) {
+                --est;
+                E e = p.item;
+                current = p.next;
+                action.accept(e);
+                if (list.modCount != expectedModCount)
+                    throw new ConcurrentModificationException();
+                return true;
+            }
+            return false;
+        }
+
+        public int characteristics() {
+            return Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
+        }
+    }
+```
+
+
+
+
+
+#### 1.2.4.8 LinkedList拓展方法
+
+##### 1.2.4.8.1 linkFirst(E e)
+
+```java
+    private void linkFirst(E e) {
+        final Node<E> f = first;
+        final Node<E> newNode = new Node<>(null, e, f);
+        first = newNode;
+        if (f == null)
+            last = newNode;
+        else
+            f.prev = newNode;
+        size++;
+        modCount++;
+    }
+```
+
+##### 1.2.4.8.2 linkLast(E e)
+
+```java
+    void linkLast(E e) {
+        final Node<E> l = last; //尾部指针
+        final Node<E> newNode = new Node<>(l, e, null); //创建一个新的节点,其前驱为l,后继为null
+        last = newNode; //尾指针指向新节点
+        if (l == null) //如果说l==null
+            first = newNode; //设置头指针指向newNode
+        else //如果说l不为空,说明当前有元素
+            l.next = newNode; //设置l的后继
+        size++; //size增加
+        modCount++; //modify次数增加
+    }
+
+
+
+
+
+```
+
+
+
+##### 1.2.4.8.3  linkBefore(E e, Node succ)
+
+```java
+    /**
+     * Inserts element e before non-null Node succ.
+     */
+    void linkBefore(E e, Node<E> succ) { // e: 待插入元素 ; succ: 后继
+        // assert succ != null;
+        final Node<E> pred = succ.prev; //得到前驱节点
+        final Node<E> newNode = new Node<>(pred, e, succ); //创建一个新的元素,其前驱是pred,其后继是succ
+        succ.prev = newNode; //succ的前驱设置为newNode
+        if (pred == null) //如果pred为null
+            first = newNode; //那么说明succ为原来的头节点,现在需要重新赋值头指针为newNode
+        else
+            pred.next = newNode; //设置pred的后继
+        size++; 
+        modCount++;
+    }
+```
+
+
+
+
+
+ 
+
+
+```java
+    Node<E> node(int index) {
+        // assert isElementIndex(index);
+
+        if (index < (size >> 1)) { //如果index 小于list大小的一半 ,那么则从头指针向后去找
+            Node<E> x = first;
+            for (int i = 0; i < index; i++)
+                x = x.next;
+            return x;
+        } else { //否则的话,从尾部向前找
+            Node<E> x = last;
+            for (int i = size - 1; i > index; i--)
+                x = x.prev;
+            return x;
+        }
+    }
+
+    /**
+     * Unlinks non-null node x.
+     */
+    E unlink(Node<E> x) {
+        // assert x != null;
+        final E element = x.item; //得到x保存的元素
+        final Node<E> next = x.next; //得到x的后继
+        final Node<E> prev = x.prev; //得到x的前驱
+
+        if (prev == null) { //如果前驱为null,那么说明x是头节点
+            first = next;  // 头指针指向next
+        } else { //如果前驱不为空,说明x不是头节点,那么将其断开
+            prev.next = next;//断开
+            x.prev = null; //help GC
+        }
+
+        if (next == null) { //如果next为null 说明x为尾部
+            last = prev; //重新设置尾指针
+        } else { //如果x不是尾部 ,那么设置next的前驱指针
+            next.prev = prev; //断开x
+            x.next = null; //help GC
+        }
+
+        x.item = null; //取消对x中item的引用
+        size--; //size减小
+        modCount++; //modify次数增加
+        return element;
+    }
+```
 
 
 
