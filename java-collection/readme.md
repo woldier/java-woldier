@@ -3505,6 +3505,268 @@ public interface Deque<E> extends Queue<E> {
     }
 ```
 
+#### 1.2.4.6 实现Deque的方法
+
+##### 1.2.4.6.1 getFirst()
+
+实现Deque接口的方法
+
+```java
+  public E getFirst() {//获取头
+        final Node<E> f = first;
+        if (f == null)
+            throw new NoSuchElementException();
+        return f.item;
+    }
+```
+
+
+
+##### 1.2.4.6.2 getLast()
+
+实现Deque接口的方法
+
+```java
+    public E getLast() { //获取尾
+        final Node<E> l = last;
+        if (l == null)
+            throw new NoSuchElementException();
+        return l.item;
+    }
+```
+
+##### 1.2.4.6.3 removeFirst()
+
+```java
+  public E removeFirst() { //删除头节点
+        final Node<E> f = first; 
+        if (f == null)
+            throw new NoSuchElementException();
+        return unlinkFirst(f);
+    }
+```
+
+##### 1.2.4.6.4 removeLast()
+
+```java
+ public E removeLast() {
+        final Node<E> l = last;
+        if (l == null)
+            throw new NoSuchElementException();
+        return unlinkLast(l);
+    }
+
+```
+
+##### 1.2.4.6.5 addFirst(E e)
+
+```java
+  public void addFirst(E e) {
+        linkFirst(e);
+    }
+```
+
+##### 1.2.4.6.6 addLast(E e)
+
+```java
+    public void addLast(E e) {
+        linkLast(e);
+    }
+```
+
+
+
+##### 1.2.4.6.7 peek()
+
+```java
+    public E peek() {
+        final Node<E> f = first;
+        return (f == null) ? null : f.item;
+    }
+```
+
+##### 1.2.4.6.8 element()
+
+```java
+    /**
+     * Retrieves, but does not remove, the head (first element) of this list.
+     *
+     * @return the head of this list
+     * @throws NoSuchElementException if this list is empty
+     * @since 1.5
+     */
+    public E element() {
+        return getFirst();
+    }
+```
+
+
+
+##### 1.2.4.6.9 remove()
+
+```java
+  public E remove() {
+        return removeFirst();
+    }
+
+```
+
+
+
+##### 1.2.4.6.10 offer(E e)
+
+```java
+  public boolean offer(E e) {
+        return add(e);
+    }
+
+```
+
+
+
+##### 1.2.4.6.11 offerFirst(E e)
+
+```java
+    public boolean offerFirst(E e) {
+        addFirst(e);
+        return true;
+    }
+```
+
+
+
+##### 1.2.4.6.12 offerLast(E e)
+
+````java
+    /**
+     * Inserts the specified element at the end of this list.
+     *
+     * @param e the element to insert
+     * @return {@code true} (as specified by {@link Deque#offerLast})
+     * @since 1.6
+     */
+    public boolean offerLast(E e) {
+        addLast(e);
+        return true;
+    }
+````
+
+
+
+##### 1.2.4.6.13 peekFirst()
+
+```java
+    /**
+     * Retrieves, but does not remove, the first element of this list,
+     * or returns {@code null} if this list is empty.
+     *
+     * @return the first element of this list, or {@code null}
+     *         if this list is empty
+     * @since 1.6
+     */
+    public E peekFirst() {
+        final Node<E> f = first;
+        return (f == null) ? null : f.item;
+     }
+```
+
+
+
+##### 1.2.4.6.14 peekLast() 
+
+```java
+    public E peekLast() {
+        final Node<E> l = last;
+        return (l == null) ? null : l.item;
+    }
+```
+
+
+
+##### 1.2.4.6.15 pollFirst()
+
+```java
+    public E pollFirst() {
+        final Node<E> f = first;
+        return (f == null) ? null : unlinkFirst(f);
+    }
+```
+
+
+
+##### 1.2.4.6.16 pollLast()
+
+```java
+  public E pollLast() {
+        final Node<E> l = last;
+        return (l == null) ? null : unlinkLast(l);
+    }
+```
+
+
+
+##### 1.2.4.6.17 push(E e)
+
+```java
+  public void push(E e) {
+        addFirst(e);
+    }
+```
+
+
+
+##### 1.2.4.6.18 pop()
+
+```java
+    public E pop() {
+        return removeFirst();
+    }
+```
+
+
+
+##### 1.2.4.6.19 removeFirstOccurrence
+
+```java
+    public boolean removeFirstOccurrence(Object o) {
+        return remove(o);
+    }
+
+```
+
+
+
+##### 1.2.4.6.20 removeLastOccurrence
+
+```java
+  public boolean removeLastOccurrence(Object o) {
+        if (o == null) {
+            for (Node<E> x = last; x != null; x = x.prev) {
+                if (x.item == null) {
+                    unlink(x);
+                    return true;
+                }
+            }
+        } else {
+            for (Node<E> x = last; x != null; x = x.prev) {
+                if (o.equals(x.item)) {
+                    unlink(x);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+```
+
+1.2.4.6.20 descendingIterator
+
+```java
+    public Iterator<E> descendingIterator() {
+        return new DescendingIterator();
+    }
+```
+
 
 
 
