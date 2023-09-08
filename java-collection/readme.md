@@ -107,6 +107,14 @@ while(iter.hasNext){
 >
 > 总之，子接口继承并重新声明父接口的方法是一种有意义的设计选择，它有助于提高代码的模块化性、可维护性和可扩展性，并允许更好地满足不同实现类的需求。这是Java集合框架中使用的一种常见设计模式。
 
+
+
+Collection接口派生出的三个子接口(site:https://blog.csdn.net/m0_67322837/article/details/124322953)
+
+![img](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F1574795de91adc3f0f27ccff25a8712a.png)
+
+
+
 # 1. Collection
 
 写在前面 为什么Java中的Collection类都继承了抽象类还要实现抽象类的接口？
@@ -3759,7 +3767,7 @@ public interface Deque<E> extends Queue<E> {
     }
 ```
 
-1.2.4.6.20 descendingIterator
+##### 1.2.4.6.21 descendingIterator
 
 ```java
     public Iterator<E> descendingIterator() {
@@ -3768,6 +3776,331 @@ public interface Deque<E> extends Queue<E> {
 ```
 
 
+
+#### 1.2.4.7 实现的List接口的方法
+
+##### 1.2.4.7.1 contains(Object o)
+
+![image-20230908143304620](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F77bbf5e905abbd8cf222283ac906f9c5.png)
+
+继承关系如下,实现了List接口(List中的contain方法又是重写的Collection中的方法),Deque接口的contains方法(Deque中的contain方法又是重写的Collection中的方法)
+
+对于AbstractCollection,其实现的思想是通过迭代器
+
+```java
+    public boolean contains(Object o) {
+        Iterator<E> it = iterator();
+        if (o==null) {
+            while (it.hasNext())
+                if (it.next()==null)
+                    return true;
+        } else {
+            while (it.hasNext())
+                if (o.equals(it.next()))
+                    return true;
+        }
+        return false;
+    }
+
+```
+
+再来看看LinkedList的实现
+
+````java
+   public boolean contains(Object o) {
+        return indexOf(o) != -1; //indexOf方法找到对应元素的下标
+    }
+````
+
+##### 1.2.4.7.2 size()
+
+![image-20230908145319467](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fd8b889960283c88aefde6198113b8e9d.png)
+
+```java
+   public int size() {
+        return size;
+    }
+```
+
+##### 1.2.4.7.3 add(E e)
+
+![image-20230908145502481](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F99bdfa1f2761ca034f75e6a1f85ef32c.png)
+
+```java
+    /**
+     * Appends the specified element to the end of this list.
+     *
+     * <p>This method is equivalent to {@link #addLast}.
+     *
+     * @param e element to be appended to this list
+     * @return {@code true} (as specified by {@link Collection#add})
+     */
+    public boolean add(E e) {
+        linkLast(e);
+        return true;
+    }
+
+```
+
+##### 1.2.4.7.4 remove(Object o)
+
+![image-20230908145529533](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fafbeaddde38c09efa8a04d1d779917f7.png)
+
+```java
+    /**
+     * Removes the first occurrence of the specified element from this list,
+     * if it is present.  If this list does not contain the element, it is
+     * unchanged.  More formally, removes the element with the lowest index
+     * {@code i} such that
+     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>
+     * (if such an element exists).  Returns {@code true} if this list
+     * contained the specified element (or equivalently, if this list
+     * changed as a result of the call).
+     *
+     * @param o element to be removed from this list, if present
+     * @return {@code true} if this list contained the specified element
+     */
+    public boolean remove(Object o) {
+        if (o == null) { //如果o是null
+            for (Node<E> x = first; x != null; x = x.next) {
+                if (x.item == null) {
+                    unlink(x);
+                    return true;
+                }
+            }
+        } else { //o不为null
+            for (Node<E> x = first; x != null; x = x.next) {
+                if (o.equals(x.item)) {
+                    unlink(x);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+```
+
+
+
+##### 1.2.4.7.4 addAll(Collection<? extends E> c)
+
+![image-20230908145610787](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fdf26c21343b497af6c11f928e523d723.png)
+
+```java
+    public boolean addAll(Collection<? extends E> c) {
+        return addAll(size, c);
+    }
+```
+
+##### 1.2.4.7.5 addAll(int index, Collection<? extends E> c)
+
+![image-20230908145704193](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fa53f0d4c6877344902b9ffce95142662.png)
+
+```java
+    public boolean addAll(int index, Collection<? extends E> c) {
+        checkPositionIndex(index);//检查索引是否合法
+
+        Object[] a = c.toArray(); // 将c转为数组
+        int numNew = a.length; //得到a的长度
+        if (numNew == 0) //如果数组的长度是0, 那么就没有进行add,此时返回false 表示没有修改
+            return false;
+        Node<E> pred, succ; //定义一个pred指针和一个succ指针
+        if (index == size) { //如果说index即插入的位置与原来的LinkedList大小一致.
+            succ = null; //后继为null
+            pred = last; //前驱为last指针指向的node
+        } else {
+            succ = node(index); //后继为index索引所指向的元素
+            pred = succ.prev; //前驱为succ.prev
+        }
+
+        for (Object o : a) { //遍历
+            @SuppressWarnings("unchecked") E e = (E) o; //转类型
+            Node<E> newNode = new Node<>(pred, e, null); //链接节点
+            if (pred == null) //如果说pred是null ,那么说明当前插入的节点是head位置,那么需要重写
+                first = newNode; //first指针指向新的节点
+            else
+                pred.next = newNode;  // 重新设置pred的next照顾这边
+            pred = newNode; //设置pred指针指向新插入的node
+        }
+
+        if (succ == null) { //如果后继为null 说明是尾部插入, 重新设置last指针
+            last = pred;
+        } else {
+            pred.next = succ;
+            succ.prev = pred;
+        }
+
+        size += numNew; //size增加
+        modCount++; //modify count 增加
+        return true;
+    }
+```
+
+
+
+##### 1.2.4.7.6 clear()
+
+![image-20230908160809316](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F9f7f3855b534bb5059ea08ea92b0161b.png)
+
+```java
+    /**
+     * Removes all of the elements from this list.
+     * The list will be empty after this call returns.
+     */
+    public void clear() {
+        // Clearing all of the links between nodes is "unnecessary", but:
+        // - helps a generational GC if the discarded nodes inhabit
+        //   more than one generation
+        // - is sure to free memory even if there is a reachable Iterator
+        for (Node<E> x = first; x != null; ) {
+            Node<E> next = x.next;
+            x.item = null;
+            x.next = null;
+            x.prev = null;
+            x = next;
+        }
+        first = last = null;
+        size = 0;
+        modCount++;
+    }
+```
+
+##### 1.2.4.7.7 get(int index)
+
+```java
+   public E get(int index) {
+        checkElementIndex(index);
+        return node(index).item;
+    }
+```
+
+
+
+##### 1.2.4.7.8 set
+
+```java
+   public E set(int index, E element) {
+        checkElementIndex(index);
+        Node<E> x = node(index);
+        E oldVal = x.item;
+        x.item = element;
+        return oldVal;
+    }
+```
+
+
+
+##### 1.2.4.7.9 add(int index, E element)
+
+```java
+  public void add(int index, E element) {
+        checkPositionIndex(index);
+
+        if (index == size)
+            linkLast(element);
+        else
+            linkBefore(element, node(index));
+    }
+```
+
+##### 1.2.4.7.10 remove(int index)
+
+```java
+
+   public E remove(int index) {
+        checkElementIndex(index);
+        return unlink(node(index));
+    }
+
+```
+
+##### 1.2.4.7.11 indexOf(Object o)
+
+```java
+
+    public int indexOf(Object o) {
+        int index = 0;
+        if (o == null) { //判断是否是null
+            for (Node<E> x = first; x != null; x = x.next) {
+                if (x.item == null)
+                    return index;
+                index++;
+            }
+        } else {
+            for (Node<E> x = first; x != null; x = x.next) {
+                if (o.equals(x.item))
+                    return index;
+                index++;
+            }
+        }
+        return -1;
+    }
+```
+
+##### 1.2.4.7.12 lastIndexOf(Object o)
+
+```java
+    public int lastIndexOf(Object o) {
+        int index = size;
+        if (o == null) {
+            for (Node<E> x = last; x != null; x = x.prev) {
+                index--;
+                if (x.item == null)
+                    return index;
+            }
+        } else {
+            for (Node<E> x = last; x != null; x = x.prev) {
+                index--;
+                if (o.equals(x.item))
+                    return index;
+            }
+        }
+        return -1;
+    }
+```
+
+
+
+##### 1.2.4.7.13 listIterator(int index)
+
+```java
+    public ListIterator<E> listIterator(int index) {
+        checkPositionIndex(index);
+        return new ListItr(index);
+    }
+```
+
+##### 1.2.4.7.14 toArray()
+
+```java
+    public Object[] toArray() {
+        Object[] result = new Object[size];
+        int i = 0;
+        for (Node<E> x = first; x != null; x = x.next)
+            result[i++] = x.item;
+        return result;
+    }
+```
+
+##### 1.2.4.7.15 toArray(T[] a)
+
+```java
+    @SuppressWarnings("unchecked")
+    public <T> T[] toArray(T[] a) {
+        if (a.length < size)
+            a = (T[])java.lang.reflect.Array.newInstance(
+                                a.getClass().getComponentType(), size);
+        int i = 0;
+        Object[] result = a;
+        for (Node<E> x = first; x != null; x = x.next)
+            result[i++] = x.item;
+
+        if (a.length > size)
+            a[size] = null;
+
+        return a;
+    }
+```
 
 
 
@@ -3832,30 +4165,55 @@ public interface Deque<E> extends Queue<E> {
     }
 ```
 
-
-
-
-
- 
-
+##### 1.2.4.8.4 unlinkFirst(Node<E> f)
 
 ```java
-    Node<E> node(int index) {
-        // assert isElementIndex(index);
-
-        if (index < (size >> 1)) { //如果index 小于list大小的一半 ,那么则从头指针向后去找
-            Node<E> x = first;
-            for (int i = 0; i < index; i++)
-                x = x.next;
-            return x;
-        } else { //否则的话,从尾部向前找
-            Node<E> x = last;
-            for (int i = size - 1; i > index; i--)
-                x = x.prev;
-            return x;
-        }
+    /**
+     * Unlinks non-null first node f.
+     */
+    private E unlinkFirst(Node<E> f) {
+        // assert f == first && f != null;
+        final E element = f.item; //得到first指针指向的node中保存的元素
+        final Node<E> next = f.next; // 得到f的next节点
+        f.item = null; // 释放引用
+        f.next = null; // help GC
+        first = next; //first指针重新指向next
+        if (next == null) //判断next是否是null,是null 说明remove后list为空
+            last = null; //设置last指针指向null
+        else 
+            next.prev = null; //设置next.prev为null
+        size--;
+        modCount++;
+        return element;
     }
+```
 
+##### 1.2.4.8.5 unlinkLast(Node<E> l)
+
+ ```java
+     /**
+      * Unlinks non-null last node l.
+      */
+     private E unlinkLast(Node<E> l) {
+         // assert l == last && l != null;
+         final E element = l.item; //得到last指针指向node中保存的元素
+         final Node<E> prev = l.prev; //得到l的前驱
+         l.item = null; 
+         l.prev = null; // help GC
+         last = prev; 
+         if (prev == null) //判断prev是否是空
+             first = null;
+         else
+             prev.next = null; //断开
+         size--;
+         modCount++;
+         return element;
+     }
+ ```
+
+##### 1.2.4.8.6 unlink(Node<E> x)
+
+```java
     /**
      * Unlinks non-null node x.
      */
@@ -3886,7 +4244,122 @@ public interface Deque<E> extends Queue<E> {
     }
 ```
 
+##### 1.2.4.8.7 isElementIndex(int index)
 
+```java
+    private boolean isElementIndex(int index) {
+        return index >= 0 && index < size;
+    }
+```
+
+##### 1.2.4.8.8 isPositionIndex(int index)
+
+```java
+    /**
+     * Tells if the argument is the index of a valid position for an
+     * iterator or an add operation.
+     */
+    private boolean isPositionIndex(int index) {
+        return index >= 0 && index <= size;
+    
+```
+
+
+
+##### 1.2.4.8.9 outOfBoundsMsg(int index)
+
+```java
+   private String outOfBoundsMsg(int index) {
+        return "Index: "+index+", Size: "+size;
+    }
+```
+
+##### 1.2.4.8.10 checkElementIndex
+
+```java
+    private void checkElementIndex(int index) {
+        if (!isElementIndex(index))
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+    }
+```
+
+
+
+##### 1.2.4.8.11 checkPositionIndex
+
+```java
+    private void checkPositionIndex(int index) {
+        if (!isPositionIndex(index))
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+    }
+```
+
+
+
+##### 1.2.4.8.12 node
+
+
+
+
+```java
+    Node<E> node(int index) {
+        // assert isElementIndex(index);
+
+        if (index < (size >> 1)) { //如果index 小于list大小的一半 ,那么则从头指针向后去找
+            Node<E> x = first;
+            for (int i = 0; i < index; i++)
+                x = x.next;
+            return x;
+        } else { //否则的话,从尾部向前找
+            Node<E> x = last;
+            for (int i = size - 1; i > index; i--)
+                x = x.prev;
+            return x;
+        }
+    }
+
+
+```
+
+1.2.4.8.13 clone
+
+```java
+    @SuppressWarnings("unchecked")
+    private LinkedList<E> superClone() {
+        try {
+            return (LinkedList<E>) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new InternalError(e);
+        }
+    }
+
+    /**
+     * Returns a shallow copy of this {@code LinkedList}. (The elements
+     * themselves are not cloned.)
+     *
+     * @return a shallow copy of this {@code LinkedList} instance
+     */
+    public Object clone() {
+        LinkedList<E> clone = superClone();
+
+        // Put clone into "virgin" state
+        clone.first = clone.last = null;
+        clone.size = 0;
+        clone.modCount = 0;
+
+        // Initialize clone with our elements
+        for (Node<E> x = first; x != null; x = x.next)
+            clone.add(x.item);
+
+        return clone;
+    }
+```
+
+
+
+
+
+到这里关于Collection的List部分就结束了.
 
 
 
