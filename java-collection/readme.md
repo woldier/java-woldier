@@ -4363,5 +4363,399 @@ public interface Deque<E> extends Queue<E> {
 
 
 
+## 1.3 Set
 
+### 1.3.1 Set
+
+>
+>
+>A collection that contains no duplicate elements. More formally, sets contain no pair of elements e1 and e2 such that e1.equals(e2), and at most one null element. As implied by its name, this interface models the mathematical set abstraction.
+>
+>一个不包含有重复元素的集合. 更通俗的讲, set 不包含又一对元素e1,e2, 其满足e1.equals(e2), 并且最多存在一个null元素. 就像接口名一样, 本接口提供了数学上 set 的抽象
+>
+>The Set interface places additional stipulations, beyond those inherited from the Collection interface, on the contracts of all constructors and on the contracts of the add, equals and hashCode methods. Declarations for other inherited methods are also included here for convenience. (The specifications accompanying these declarations have been tailored to the Set interface, but they do not contain any additional stipulations.)
+>The additional stipulation on constructors is, not surprisingly, that all constructors must create a set that contains no duplicate elements (as defined above).
+>
+>Set接口展现出了额外的特性, 相较于从Collection接口继承的方法, Set对所有构造函数,equals,和hashcode方法做了额外的规定. 为了方便本接口中重新声明其他从Coleection中继承到的方法. (这些声明所附带的规范是根据Set接口定制的，但不包含任何额外的规定.) . 额外的对构造方法的约束是所有的构造函数都创建一个不包含重复元素的set. 
+>
+>Note: Great care must be exercised if mutable objects are used as set elements. The behavior of a set is not specified if the value of an object is changed in a manner that affects equals comparisons while the object is an element in the set. A special case of this prohibition is that it is not permissible for a set to contain itself as an element.
+>
+>Note: 如果将可变对象用作Set元素，必须格外小心. 当一个Object对象是Set中的一个元素,如果其value发生了变化,并且该变化会影响到equals方法, 那么Set的行为将是未定义的. 一个特殊的情况是不被允许的,就是一个set不能将自己作为元素.
+>
+>Some set implementations have restrictions on the elements that they may contain. For example, some implementations prohibit null elements, and some have restrictions on the types of their elements. Attempting to add an ineligible element throws an unchecked exception, typically NullPointerException or ClassCastException. Attempting to query the presence of an ineligible element may throw an exception, or it may simply return false; some implementations will exhibit the former behavior and some will exhibit the latter. More generally, attempting an operation on an ineligible element whose completion would not result in the insertion of an ineligible element into the set may throw an exception or it may succeed, at the option of the implementation. Such exceptions are marked as "optional" in the specification for this interface.
+>
+>一些set实现可能对它们所拥有的元素有着限制. 举个例子, 一些实现抑制空元素的插入, 一些则对元素的tpye有要求. 尝试添加一个不合适的元素将会抛出异常, 或者简单的抛出NullPointerException or ClassCastException. 尝试查询存在的不被接受的元素将会抛出后者(ClassCastException). 更通常的, 尝试 对一个不受支持的元素进行操作该操作的完成将不会导致元素的插入, 有可能是抛出异常,有可能则是直接返回成功, 取决于Set的实现.  
+
+![image-20230909101623212](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F134e633633d854280a1a1c1f8b52e5e4.png)
+
+Set重定义的方法如上所示, 重定义了Collection中的部分方法. 因为Collection接口中的方法完全一致,并且不像List方法一样自己扩展了一些方法(如`add(int index,E e)`),所以这里就不在过多介绍. 
+
+
+
+### 1.3.2 AbstractSet
+
+> This class provides a skeletal implementation of the Set interface to minimize the effort required to implement this interface.
+>
+> 本类提供了实现Set接口的骨架,来最小化实现Set接口所需要做出的努力.
+>
+> The process of implementing a set by extending this class is identical to that of implementing a Collection by extending AbstractCollection, except that all of the methods and constructors in subclasses of this class must obey the additional constraints imposed by the Set interface (for instance, the add method must not permit addition of multiple instances of an object to a set).
+>
+> 在实现Set接口时继承AbstractSet类的过程 与 实现Collection接口时继承AbstractCollection基本相同, 除了所有的方法以及构造方法必须遵循有关set的特性(举个例子, add方法必须保证不允许额外的相同的多实例插入到set中)
+>
+> Note that this class does not override any of the implementations from the AbstractCollection class. It merely adds implementations for equals and hashCode.
+>
+> 需要注意的时,本class并没有重写AbstractCollection中的方法. 而仅仅是添加了equals和hashcode的的实现. 
+
+
+
+
+
+```java
+public abstract class AbstractSet<E> extends AbstractCollection<E> implements Set<E> {
+    /**
+     * Sole constructor.  (For invocation by subclass constructors, typically
+     * implicit.)
+     */
+    protected AbstractSet() {
+    }
+    // Comparison and hashing
+    public boolean equals(Object o) {
+        if (o == this) //如果o就是自己
+            return true;
+        if (!(o instanceof Set)) //如果不是set
+            return false;
+        Collection<?> c = (Collection<?>) o; //转collection
+        if (c.size() != size()) //先比较大小,大小不一样肯定也不相等
+            return false;
+        try {
+            return containsAll(c); // 调用方法返回
+        } catch (ClassCastException unused)   {
+            return false;
+        } catch (NullPointerException unused) {
+            return false;
+        }
+    }
+    public int hashCode() { //hashcode
+        int h = 0;
+        Iterator<E> i = iterator();
+        while (i.hasNext()) {
+            E obj = i.next();
+            if (obj != null)
+                h += obj.hashCode();
+        }
+        return h;
+    }
+
+  
+    public boolean removeAll(Collection<?> c) { 
+        Objects.requireNonNull(c);
+        boolean modified = false;
+
+        if (size() > c.size()) { //如果本set的长度大于c
+            for (Iterator<?> i = c.iterator(); i.hasNext(); )
+                modified |= remove(i.next());
+        } else { //如果set的长度小于c
+            for (Iterator<?> i = iterator(); i.hasNext(); ) {
+                if (c.contains(i.next())) {
+                    i.remove();
+                    modified = true;
+                }
+            }
+        }
+        return modified;
+    }
+
+}
+```
+
+### 1.3.3 HashSet 
+
+> This class implements the Set interface, backed by a hash table (actually a HashMap instance). It makes no guarantees as to the iteration order of the set; in particular, it does not guarantee that the order will remain constant over time. This class permits the null element.
+> This class offers constant time performance for the basic operations (add, remove, contains and size), assuming the hash function disperses the elements properly among the buckets. Iterating over this set requires time proportional to the sum of the HashSet instance's size (the number of elements) plus the "capacity" of the backing HashMap instance (the number of buckets). Thus, it's very important not to set the initial capacity too high (or the load factor too low) if iteration performance is important.
+> Note that this implementation is not synchronized. If multiple threads access a hash set concurrently, and at least one of the threads modifies the set, it must be synchronized externally. This is typically accomplished by synchronizing on some object that naturally encapsulates the set. If no such object exists, the set should be "wrapped" using the Collections.synchronizedSet method. This is best done at creation time, to prevent accidental unsynchronized access to the set:
+>     Set s = Collections.synchronizedSet(new HashSet(...));
+> The iterators returned by this class's iterator method are fail-fast: if the set is modified at any time after the iterator is created, in any way except through the iterator's own remove method, the Iterator throws a ConcurrentModificationException. Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
+> Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
+> This class is a member of the Java Collections Framework.
+
+// TODO 由于基于hashmap实现,因此 我们阅读完hashmap源码后再回来看.
+
+
+
+### 1.3.4 TreeSet
+
+> A NavigableSet implementation based on a TreeMap. The elements are ordered using their natural ordering, or by a Comparator provided at set creation time, depending on which constructor is used.
+> This implementation provides guaranteed log(n) time cost for the basic operations (add, remove and contains).
+> Note that the ordering maintained by a set (whether or not an explicit comparator is provided) must be consistent with equals if it is to correctly implement the Set interface. (See Comparable or Comparator for a precise definition of consistent with equals.) This is so because the Set interface is defined in terms of the equals operation, but a TreeSet instance performs all element comparisons using its compareTo (or compare) method, so two elements that are deemed equal by this method are, from the standpoint of the set, equal. The behavior of a set is well-defined even if its ordering is inconsistent with equals; it just fails to obey the general contract of the Set interface.
+> Note that this implementation is not synchronized. If multiple threads access a tree set concurrently, and at least one of the threads modifies the set, it must be synchronized externally. This is typically accomplished by synchronizing on some object that naturally encapsulates the set. If no such object exists, the set should be "wrapped" using the Collections.synchronizedSortedSet method. This is best done at creation time, to prevent accidental unsynchronized access to the set:
+>     SortedSet s = Collections.synchronizedSortedSet(new TreeSet(...));
+> The iterators returned by this class's iterator method are fail-fast: if the set is modified at any time after the iterator is created, in any way except through the iterator's own remove method, the iterator will throw a ConcurrentModificationException. Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
+> Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
+> This class is a member of the Java Collections Framework.
+
+// TODO 由于基于Treemap实现,因此 我们阅读完hashmap源码后再回来看.
+
+
+
+
+
+
+
+# 2.Map
+
+
+
+> An object that maps keys to values. A map cannot contain duplicate keys; each key can map to at most one value.
+>
+> 一个对象,其将key映射成对应的value. 一个map不能包含重复的key. 一个key不能映射超过一个value.
+>
+> This interface takes the place of the Dictionary class, which was a totally abstract class rather than an interface.
+>
+> 本接口替代了Dictionary类(Dictionary是一个抽象类而不是接口)
+>
+> The Map interface provides three collection views, which allow a map's contents to be viewed as a set of keys, collection of values, or set of key-value mappings. The order of a map is defined as the order in which the iterators on the map's collection views return their elements. Some map implementations, like the TreeMap class, make specific guarantees as to their order; others, like the HashMap class, do not.
+>
+> Map接口提供了三种集合视图, 这使得map能够被是为三种形态一个key的集合,一个value的集合, 或者一个key-value对的集合映射.  Map的顺序定义为迭代器对象返回元素的顺序. 一些Map的实现, 比如TreeMap, 对元素的顺序做出了特定的要求, 其他的,比如所HashMap则没有.
+>
+> Note: great care must be exercised if mutable objects are used as map keys. The behavior of a map is not specified if the value of an object is changed in a manner that affects equals comparisons while the object is a key in the map. A special case of this prohibition is that it is not permissible for a map to contain itself as a key. While it is permissible for a map to contain itself as a value, extreme caution is advised: the equals and hashCode methods are no longer well defined on such a map.
+>
+> Note: 如果将可变对象用作Map元素，必须格外小心. 当一个Object对象是Map中的一个元素,如果其value发生了变化,并且该变化会影响到equals方法, 那么Set的行为将是未定义的. 一个特殊的情况是不被允许的,就是一个Map不能将自己作为元素.
+>
+> All general-purpose map implementation classes should provide two "standard" constructors: a void (no arguments) constructor which creates an empty map, and a constructor with a single argument of type Map, which creates a new map with the same key-value mappings as its argument. In effect, the latter constructor allows the user to copy any map, producing an equivalent map of the desired class. There is no way to enforce this recommendation (as interfaces cannot contain constructors) but all of the general-purpose map implementations in the JDK comply.
+>
+> 通常一个Map的实现需要提供两个"标准的"构造方法: 一个无参构造器,其产生一个空的map. 以及一个有一个参数的构造器其创建一个新的有着相同key-value映射的map.实际上，后一种构造函数允许用户复制任何映射，生成所需类的等价映射。我们无法强制执行这一建议（因为接口不能包含构造函数），但 JDK 中的所有通用映射实现都符合这一建议。
+>
+> The "destructive" methods contained in this interface, that is, the methods that modify the map on which they operate, are specified to throw UnsupportedOperationException if this map does not support the operation. If this is the case, these methods may, but are not required to, throw an UnsupportedOperationException if the invocation would have no effect on the map. For example, invoking the putAll(Map) method on an unmodifiable map may, but is not required to, throw the exception if the map whose mappings are to be "superimposed" is empty.
+>
+> 该接口中包含的 "破坏性 "方法，即修改所操作的地图的方法，如果该地图不支持该操作，则指定抛出 UnsupportedOperationException。在这种情况下，如果调用对映射没有影响，这些方法可以（但不是必须）抛出 UnsupportedOperationException。例如，在不可修改的映射上调用 putAll(Map) 方法时，如果映射将被 "叠加 "的映射是空的，则可能（但不是必须）抛出异常。
+>
+> Some map implementations have restrictions on the keys and values they may contain. For example, some implementations prohibit null keys and values, and some have restrictions on the types of their keys. Attempting to insert an ineligible key or value throws an unchecked exception, typically NullPointerException or ClassCastException. Attempting to query the presence of an ineligible key or value may throw an exception, or it may simply return false; some implementations will exhibit the former behavior and some will exhibit the latter. More generally, attempting an operation on an ineligible key or value whose completion would not result in the insertion of an ineligible element into the map may throw an exception or it may succeed, at the option of the implementation. Such exceptions are marked as "optional" in the specification for this interface.
+>
+> 一些 Map 接口的实现对它们可以包含的键和值有一些限制。例如，一些实现禁止使用 null 键和值，而一些对键的类型有限制。尝试插入不合格的键或值会引发一个未经检查的异常，通常是 NullPointerException 或 ClassCastException。尝试查询不合格的键或值的存在可能会引发异常，或者可能只会返回 false；一些实现将展现前一种行为，而一些将展现后一种行为。更一般地说，对不合格的键或值进行操作，如果其完成不会导致将不合格的元素插入到 Map 中，可能会引发异常，也可能会成功，这取决于实现的选项。此类异常在该接口的规范中被标记为“可选”。
+>
+> Many methods in Collections Framework interfaces are defined in terms of the equals method. For example, the specification for the containsKey(Object key) method says: "returns true if and only if this map contains a mapping for a key k such that `(key==null ? k==null : key.equals(k))`." This specification should not be construed to imply that invoking Map.containsKey with a non-null argument key will cause key.equals(k) to be invoked for any key k. Implementations are free to implement optimizations whereby the equals invocation is avoided, for example, by first comparing the hash codes of the two keys. (The Object.hashCode() specification guarantees that two objects with unequal hash codes cannot be equal.) More generally, implementations of the various Collections Framework interfaces are free to take advantage of the specified behavior of underlying Object methods wherever the implementor deems it appropriate.
+>
+> Collections Framework 接口中的许多方法是根据 equals 方法定义的。例如，containsKey(Object key) 方法的规范表示：“仅当此映射包含一个键 k 的映射，使得 `(key==null ? k==null : key.equals(k))`” 时返回 true。这个规范不应被解释为调用 Map.containsKey 时，对于非空参数 key 会导致 key.equals(k) 被调用以用于任何键 k。实现可以自由地实现优化，避免 equals 调用，例如，首先比较两个键的哈希码。（Object.hashCode() 规范保证具有不相等哈希码的两个对象不能相等。）更一般地说，各种 Collections Framework 接口的实现可以在实现者认为适当的地方利用底层 Object 方法的指定行为。
+>
+> Some map operations which perform recursive traversal of the map may fail with an exception for self-referential instances where the map directly or indirectly contains itself. This includes the clone(), equals(), hashCode() and toString() methods. Implementations may optionally handle the self-referential scenario, however most current implementations do not do so.
+>
+> 在执行对Map进行递归遍历的某些地图操作时，如果Map直接或间接包含自身，可能会导致异常。这包括 clone()、equals()、hashCode() 和 toString() 方法。实现可以选择性地处理这种自引用情况，但目前大多数实现不这样做。
+
+![image-20230909163509232](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F5ca95aed26a66012a9195296647e96d3.png)
+
+
+
+2.1 Entry内部接口
+
+在Java中，`Map`接口的`Entry`内部接口（实际上是一个嵌套接口）用于表示`Map`中的键值对（key-value pair）。它是`Map`的一个成员内部接口，用于封装`Map`中的数据，包括键和与之关联的值。
+
+`Entry`接口通常包含两个方法：
+
+1. `getKey()`：这个方法用于获取与`Entry`关联的键。
+
+2. `getValue()`：这个方法用于获取与`Entry`关联的值。
+
+通过`Map`的`entrySet()`方法，可以获得包含所有`Entry`对象的集合，然后可以迭代这些`Entry`对象，从中获取键和值。
+
+以下是一个示例，演示如何使用`Entry`接口来遍历`Map`中的键值对：
+
+```java
+import java.util.*;
+
+public class MapEntryExample {
+    public static void main(String[] args) {
+        Map<String, Integer> map = new HashMap<>();
+        map.put("Alice", 25);
+        map.put("Bob", 30);
+        map.put("Charlie", 22);
+
+        // 获取Map中的Entry集合
+        Set<Map.Entry<String, Integer>> entrySet = map.entrySet();
+
+        // 遍历Entry集合并输出键值对
+        for (Map.Entry<String, Integer> entry : entrySet) {
+            String key = entry.getKey();
+            Integer value = entry.getValue();
+            System.out.println("Key: " + key + ", Value: " + value);
+        }
+    }
+}
+```
+
+通过使用`Entry`接口，您可以方便地访问`Map`中的键和值，以便进行各种操作，如遍历、更新或删除键值对。这有助于更灵活地操作`Map`的内容。
+
+
+
+```java
+    /**
+     * A map entry (key-value pair).  The <tt>Map.entrySet</tt> method returns
+     * a collection-view of the map, whose elements are of this class.  The
+     * <i>only</i> way to obtain a reference to a map entry is from the
+     * iterator of this collection-view.  These <tt>Map.Entry</tt> objects are
+     * valid <i>only</i> for the duration of the iteration; more formally,
+     * the behavior of a map entry is undefined if the backing map has been
+     * modified after the entry was returned by the iterator, except through
+     * the <tt>setValue</tt> operation on the map entry.
+     * map entity（键-值对）。Map.entrySet方法返回地图的集合视图，其中的元素属于这个类。
+     * 获取地图条目的map entity是通过这个集合视图的迭代器。这些Map.Entry对象仅在迭代期间有效；
+     * 更正式地说，如果在迭代器返回条目后修改了底层地图，地图条目的行为将变得不确定，除非通过地图条目上的setValue操作。
+     * @see Map#entrySet()
+     * @since 1.2
+     */
+    interface Entry<K,V> {
+        /**
+         * Returns the key corresponding to this entry.
+         * 返回entity的key
+         * @return the key corresponding to this entry
+         * @throws IllegalStateException implementations may, but are not
+         *         required to, throw this exception if the entry has been
+         *         removed from the backing map.
+         */
+        K getKey();
+
+        /**
+         * Returns the value corresponding to this entry.  If the mapping
+         * has been removed from the backing map (by the iterator's
+         * <tt>remove</tt> operation), the results of this call are undefined.
+         * 返回entity的value. 如果映射关系已经被后端的map移除(通过迭代器的remove方法), 那么本方法的返回时未定义的. 
+         * @return the value corresponding to this entry
+         * @throws IllegalStateException implementations may, but are not
+         *         required to, throw this exception if the entry has been
+         *         removed from the backing map.
+         */
+        V getValue();
+
+        /**
+         * Replaces the value corresponding to this entry with the specified
+         * value (optional operation).  (Writes through to the map.)  The
+         * behavior of this call is undefined if the mapping has already been
+         * removed from the map (by the iterator's <tt>remove</tt> operation).
+         * 用给的的value代替相应entry中的value(可选操作). 
+         * @param value new value to be stored in this entry
+         * @return old value corresponding to the entry
+         * @throws UnsupportedOperationException if the <tt>put</tt> operation
+         *         is not supported by the backing map
+         * @throws ClassCastException if the class of the specified value
+         *         prevents it from being stored in the backing map
+         * @throws NullPointerException if the backing map does not permit
+         *         null values, and the specified value is null
+         * @throws IllegalArgumentException if some property of this value
+         *         prevents it from being stored in the backing map
+         * @throws IllegalStateException implementations may, but are not
+         *         required to, throw this exception if the entry has been
+         *         removed from the backing map.
+         */
+        V setValue(V value);
+
+        /**
+         * Compares the specified object with this entry for equality.
+         * Returns <tt>true</tt> if the given object is also a map entry and
+         * the two entries represent the same mapping.  More formally, two
+         * entries <tt>e1</tt> and <tt>e2</tt> represent the same mapping
+         * if<pre>
+         *     (e1.getKey()==null ?
+         *      e2.getKey()==null : e1.getKey().equals(e2.getKey()))  &amp;&amp;
+         *     (e1.getValue()==null ?
+         *      e2.getValue()==null : e1.getValue().equals(e2.getValue()))
+         * </pre>
+         * This ensures that the <tt>equals</tt> method works properly across
+         * different implementations of the <tt>Map.Entry</tt> interface.
+         *
+         * @param o object to be compared for equality with this map entry
+         * @return <tt>true</tt> if the specified object is equal to this map
+         *         entry
+         */
+        boolean equals(Object o);
+
+        /**
+         * Returns the hash code value for this map entry.  The hash code
+         * of a map entry <tt>e</tt> is defined to be: <pre>
+         *     (e.getKey()==null   ? 0 : e.getKey().hashCode()) ^
+         *     (e.getValue()==null ? 0 : e.getValue().hashCode())
+         * </pre>
+         * This ensures that <tt>e1.equals(e2)</tt> implies that
+         * <tt>e1.hashCode()==e2.hashCode()</tt> for any two Entries
+         * <tt>e1</tt> and <tt>e2</tt>, as required by the general
+         * contract of <tt>Object.hashCode</tt>.
+         *
+         * @return the hash code value for this map entry
+         * @see Object#hashCode()
+         * @see Object#equals(Object)
+         * @see #equals(Object)
+         */
+        int hashCode();
+
+        /**
+         * Returns a comparator that compares {@link Map.Entry} in natural order on key.
+         *
+         * <p>The returned comparator is serializable and throws {@link
+         * NullPointerException} when comparing an entry with a null key.
+         *
+         * @param  <K> the {@link Comparable} type of then map keys
+         * @param  <V> the type of the map values
+         * @return a comparator that compares {@link Map.Entry} in natural order on key.
+         * @see Comparable
+         * @since 1.8
+         */
+        public static <K extends Comparable<? super K>, V> Comparator<Map.Entry<K,V>> comparingByKey() {
+            return (Comparator<Map.Entry<K, V>> & Serializable)
+                (c1, c2) -> c1.getKey().compareTo(c2.getKey());
+        }
+
+        /**
+         * Returns a comparator that compares {@link Map.Entry} in natural order on value.
+         *
+         * <p>The returned comparator is serializable and throws {@link
+         * NullPointerException} when comparing an entry with null values.
+         *
+         * @param <K> the type of the map keys
+         * @param <V> the {@link Comparable} type of the map values
+         * @return a comparator that compares {@link Map.Entry} in natural order on value.
+         * @see Comparable
+         * @since 1.8
+         */
+        public static <K, V extends Comparable<? super V>> Comparator<Map.Entry<K,V>> comparingByValue() {
+            return (Comparator<Map.Entry<K, V>> & Serializable)
+                (c1, c2) -> c1.getValue().compareTo(c2.getValue());
+        }
+
+        /**
+         * Returns a comparator that compares {@link Map.Entry} by key using the given
+         * {@link Comparator}.
+         *
+         * <p>The returned comparator is serializable if the specified comparator
+         * is also serializable.
+         *
+         * @param  <K> the type of the map keys
+         * @param  <V> the type of the map values
+         * @param  cmp the key {@link Comparator}
+         * @return a comparator that compares {@link Map.Entry} by the key.
+         * @since 1.8
+         */
+        public static <K, V> Comparator<Map.Entry<K, V>> comparingByKey(Comparator<? super K> cmp) {
+            Objects.requireNonNull(cmp);
+            return (Comparator<Map.Entry<K, V>> & Serializable)
+                (c1, c2) -> cmp.compare(c1.getKey(), c2.getKey());
+        }
+
+        /**
+         * Returns a comparator that compares {@link Map.Entry} by value using the given
+         * {@link Comparator}.
+         *
+         * <p>The returned comparator is serializable if the specified comparator
+         * is also serializable.
+         *
+         * @param  <K> the type of the map keys
+         * @param  <V> the type of the map values
+         * @param  cmp the value {@link Comparator}
+         * @return a comparator that compares {@link Map.Entry} by the value.
+         * @since 1.8
+         */
+        public static <K, V> Comparator<Map.Entry<K, V>> comparingByValue(Comparator<? super V> cmp) {
+            Objects.requireNonNull(cmp);
+            return (Comparator<Map.Entry<K, V>> & Serializable)
+                (c1, c2) -> cmp.compare(c1.getValue(), c2.getValue());
+        }
+    }
+```
 
