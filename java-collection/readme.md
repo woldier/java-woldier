@@ -4545,7 +4545,7 @@ public abstract class AbstractSet<E> extends AbstractCollection<E> implements Se
 
 
 
-2.1 Entry内部接口
+## 2.1 Entry内部接口
 
 在Java中，`Map`接口的`Entry`内部接口（实际上是一个嵌套接口）用于表示`Map`中的键值对（key-value pair）。它是`Map`的一个成员内部接口，用于封装`Map`中的数据，包括键和与之关联的值。
 
@@ -4598,7 +4598,8 @@ public class MapEntryExample {
      * the <tt>setValue</tt> operation on the map entry.
      * map entity（键-值对）。Map.entrySet方法返回地图的集合视图，其中的元素属于这个类。
      * 获取地图条目的map entity是通过这个集合视图的迭代器。这些Map.Entry对象仅在迭代期间有效；
-     * 更正式地说，如果在迭代器返回条目后修改了底层地图，地图条目的行为将变得不确定，除非通过地图条目上的setValue操作。
+     * 更正式地说，如果在迭代器返回条目后修改了底层地图，地图条目的行为将变得不确定，
+     * 除非通过地图条目上的setValue操作。
      * @see Map#entrySet()
      * @since 1.2
      */
@@ -4617,7 +4618,8 @@ public class MapEntryExample {
          * Returns the value corresponding to this entry.  If the mapping
          * has been removed from the backing map (by the iterator's
          * <tt>remove</tt> operation), the results of this call are undefined.
-         * 返回entity的value. 如果映射关系已经被后端的map移除(通过迭代器的remove方法), 那么本方法的返回时未定义的. 
+         * 返回entity的value. 如果映射关系已经被后端的map移除(通过迭代器的remove方法), 
+         * 那么本方法的返回时未定义的. 
          * @return the value corresponding to this entry
          * @throws IllegalStateException implementations may, but are not
          *         required to, throw this exception if the entry has been
