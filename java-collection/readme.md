@@ -5453,3 +5453,152 @@ Object类中有具体实现,但是这里将其重新定义为了抽象方法
 
 
 
+
+
+
+
+### 2.3.1 SimpleEntry
+
+![image-20230911212307819](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fcb8ec64c8c2a96f90a619227a46bfa2a.png)
+
+#### 2.3.1.1 实现的Entry接口的方法
+
+> An Entry maintaining a key and a value. The value may be changed using the setValue method. This class facilitates the process of building custom map implementations. For example, it may be convenient to return arrays of SimpleEntry instances in method Map.entrySet().toArray.
+> 一个维护key-value对的Entry. value或许会应为调用setValue方法而发生改变. 本类使得编写一个map的实现类更加便利.  ju个例子,  通过Map.entrySet().toArray返回SimpleEntry 实例类型的数组可能非常方便.
+
+
+
+```java
+ public static class SimpleEntry<K,V>
+        implements Entry<K,V>, java.io.Serializable
+    {
+        private static final long serialVersionUID = -8499721149061103585L;
+
+        private final K key;  //维护的key,key为不可变的
+        private V value;  //维护的value
+
+        /**
+         * Creates an entry representing a mapping from the specified
+         * key to the specified value.
+         * 根据key value创建一个entry代表一个mapping
+         * @param key the key represented by this entry
+         * @param value the value represented by this entry
+         */
+        public SimpleEntry(K key, V value) {
+            this.key   = key;
+            this.value = value;
+        }
+
+        /**
+         * Creates an entry representing the same mapping as the
+         * specified entry.
+         * 创建与传入的entry具有相同key-value的映射.
+         * @param entry the entry to copy
+         */
+        public SimpleEntry(Entry<? extends K, ? extends V> entry) {
+            this.key   = entry.getKey();
+            this.value = entry.getValue();
+        }
+
+        /**
+         * Returns the key corresponding to this entry.
+         * 返回entry中的key
+         * @return the key corresponding to this entry
+         */
+        public K getKey() {
+            return key;
+        }
+
+        /**
+         * Returns the value corresponding to this entry.
+         * 返回entry中的value
+         * @return the value corresponding to this entry
+         */
+        public V getValue() {
+            return value;
+        }
+
+        /**
+         * Replaces the value corresponding to this entry with the specified
+         * value. 
+         * 替代entry中的value
+         * @param value new value to be stored in this entry
+         * @return the old value corresponding to the entry
+         */
+        public V setValue(V value) {
+            V oldValue = this.value;
+            this.value = value;
+            return oldValue;
+        }
+
+        /**
+         * Compares the specified object with this entry for equality.
+         * Returns {@code true} if the given object is also a map entry and
+         * the two entries represent the same mapping.  More formally, two
+         * entries {@code e1} and {@code e2} represent the same mapping
+         * if<pre>
+         *   (e1.getKey()==null ?
+         *    e2.getKey()==null :
+         *    e1.getKey().equals(e2.getKey()))
+         *   &amp;&amp;
+         *   (e1.getValue()==null ?
+         *    e2.getValue()==null :
+         *    e1.getValue().equals(e2.getValue()))</pre>
+         * This ensures that the {@code equals} method works properly across
+         * different implementations of the {@code Map.Entry} interface.
+         * 比较特定的object与当前的entry是否相等. 返回true,如果给出的object也是一个map的entry并且两个entry都代表着相同的映射关系.
+         * 更加正式的代码表示为 (e1.getKey()==null ?e2.getKey()==null :e1.getKey().equals(e2.getKey())) && (e1.getValue()==null ? 
+         * e2.getValue()==null :e1.getValue().equals(e2.getValue()))
+         * 这样才能保证equals方法正常的再不同的 Map.Entry 实现下工作.
+         * @param o object to be compared for equality with this map entry
+         * @return {@code true} if the specified object is equal to this map
+         *         entry
+         * @see    #hashCode
+         */
+        public boolean equals(Object o) {
+            if (!(o instanceof Map.Entry))
+                return false;
+            Map.Entry<?,?> e = (Map.Entry<?,?>)o;
+            return eq(key, e.getKey()) && eq(value, e.getValue());
+        }
+
+        /**
+         * Returns the hash code value for this map entry.  The hash code
+         * of a map entry {@code e} is defined to be: <pre>
+         *   (e.getKey()==null   ? 0 : e.getKey().hashCode()) ^
+         *   (e.getValue()==null ? 0 : e.getValue().hashCode())</pre>
+         * This ensures that {@code e1.equals(e2)} implies that
+         * {@code e1.hashCode()==e2.hashCode()} for any two Entries
+         * {@code e1} and {@code e2}, as required by the general
+         * contract of {@link Object#hashCode}.
+         * 返回map entry的hash值. 
+         * 本方法的hash code 算法实现表明了
+         * 这个方法的目的是确保对于任何两个Map条目e1和e2，如果e1.equals(e2)成立，那么e1.hashCode()==e2.hashCode()也必须成立。
+         * 这是为了满足Java中Object.hashCode方法的通用合同要求。
+         * @return the hash code value for this map entry
+         * @see    #equals
+         */
+        public int hashCode() {
+            return (key   == null ? 0 :   key.hashCode()) ^
+                   (value == null ? 0 : value.hashCode());
+        }
+
+        /**
+         * Returns a String representation of this map entry.  This
+         * implementation returns the string representation of this
+         * entry's key followed by the equals character ("<tt>=</tt>")
+         * followed by the string representation of this entry's value.
+         * 返回本entry的String类型的替代值.
+         * @return a String representation of this map entry
+         */
+        public String toString() {
+            return key + "=" + value;
+        }
+
+    }
+```
+
+
+
+
+
