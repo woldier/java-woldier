@@ -5451,7 +5451,37 @@ Object类中有具体实现,但是这里将其重新定义为了抽象方法
 >
 > 该类中每个非抽象方法的文档都详细描述了其实现方法。如果要实现的映射需要更高效的实现，则可以重写这些方法
 
+定义的成员变量
 
+```java
+    /**
+     * Each of these fields are initialized to contain an instance of the
+     * appropriate view the first time this view is requested.  The views are
+     * stateless, so there's no reason to create more than one of each.
+     * 每个field被初始化来包含一个合适的视图实例,当该视图被首次请求时.  视图是无状态的, 因此没有理由创建超过一个.
+     * <p>Since there is no synchronization performed while accessing these fields,
+     * it is expected that java.util.Map view classes using these fields have
+     * no non-final fields (or any fields at all except for outer-this). Adhering
+     * to this rule would make the races on these fields benign.
+     * 由于在访问这些字段时不会执行同步，因此预计使用这些字段的 java.util.Map 视图类不会有non-final字段（
+     * 或除 outer-this 之外的任何字段）。遵守这一规则将使这些字段上的竞赛变得无害。
+     * <p>It is also imperative that implementations read the field only once,
+     * as in:
+     *
+     * <pre> {@code
+     * public Set<K> keySet() {
+     *   Set<K> ks = keySet;  // single racy read
+     *   if (ks == null) {
+     *     ks = new KeySet();
+     *     keySet = ks;
+     *   }
+     *   return ks;
+     * }
+     *}</pre>
+     */
+    transient Set<K>        keySet;
+    transient Collection<V> values;
+```
 
 
 
@@ -5462,6 +5492,8 @@ Object类中有具体实现,但是这里将其重新定义为了抽象方法
 ![image-20230911212307819](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2Fcb8ec64c8c2a96f90a619227a46bfa2a.png)
 
 #### 2.3.1.1 实现的Entry接口的方法
+
+![image-20230912082322977](https://woldier-pic-repo-1309997478.cos.ap-chengdu.myqcloud.com/woldier/2023%2F09%2F478fdaf9faeb189ca68a464ae5fe4ad6.png)
 
 > An Entry maintaining a key and a value. The value may be changed using the setValue method. This class facilitates the process of building custom map implementations. For example, it may be convenient to return arrays of SimpleEntry instances in method Map.entrySet().toArray.
 > 一个维护key-value对的Entry. value或许会应为调用setValue方法而发生改变. 本类使得编写一个map的实现类更加便利.  ju个例子,  通过Map.entrySet().toArray返回SimpleEntry 实例类型的数组可能非常方便.
@@ -5597,6 +5629,454 @@ Object类中有具体实现,但是这里将其重新定义为了抽象方法
 
     }
 ```
+
+
+
+### 2.3.2 SimpleImmutableEntry
+
+> An Entry maintaining an immutable key and value. This class does not support method setValue. This class may be convenient in methods that return thread-safe snapshots of key-value mappings.
+> 一个不能更改key-value的Entry实现. 本类不支持setValue方法. 当需要返回一个thread-safe 的key-value映射快照时,使用本类就非常的方便. 
+
+```java
+ public static class SimpleImmutableEntry<K,V>
+        implements Entry<K,V>, java.io.Serializable
+    {
+        private static final long serialVersionUID = 7138329143949025153L;
+
+        private final K key;
+        private final V value;
+
+    
+        public SimpleImmutableEntry(K key, V value) {
+            this.key   = key;
+            this.value = value;
+        }
+
+        public SimpleImmutableEntry(Entry<? extends K, ? extends V> entry) {
+            this.key   = entry.getKey();
+            this.value = entry.getValue();
+        }
+
+        public K getKey() {
+            return key;
+        }
+
+        public V getValue() {
+            return value;
+        }
+
+        public V setValue(V value) {
+            throw new UnsupportedOperationException();
+        }
+        public boolean equals(Object o) {
+            if (!(o instanceof Map.Entry))
+                return false;
+            Map.Entry<?,?> e = (Map.Entry<?,?>)o;
+            return eq(key, e.getKey()) && eq(value, e.getValue());
+        }
+        public int hashCode() {
+            return (key   == null ? 0 :   key.hashCode()) ^
+                   (value == null ? 0 : value.hashCode());
+        }
+        public String toString() {
+            return key + "=" + value;
+        }
+
+    }
+```
+
+### 2.3.3 实现的Map的方法
+
+
+
+
+
+```java
+    public int size() {  //返回key-value映射对的数量
+        return entrySet().size();
+    }
+
+```
+
+
+
+```java
+//是否为空
+    public boolean isEmpty() {
+        return size() == 0;
+    }
+```
+
+
+
+```java
+ //包含某个值
+    public boolean containsValue(Object value) {
+        Iterator<Entry<K,V>> i = entrySet().iterator(); //得到迭代器
+        if (value==null) {  //单端是否为null ,为null 和不为null 是两种逻辑
+            while (i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (e.getValue()==null)
+                    return true;
+            }
+        } else {
+            while (i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (value.equals(e.getValue()))
+                    return true;
+            }
+        }
+        return false;
+    }
+```
+
+
+
+```java
+   //包含某个key
+	public boolean containsKey(Object key) {
+        Iterator<Map.Entry<K,V>> i = entrySet().iterator(); //获取迭代器
+        if (key==null) { 
+            while (i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (e.getKey()==null)
+                    return true;
+            }
+        } else {
+            while (i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (key.equals(e.getKey()))
+                    return true;
+            }
+        }
+        return false;
+    }
+```
+
+
+
+
+
+```java
+  //通过key 获取对应的value
+	public V get(Object key) {
+        Iterator<Entry<K,V>> i = entrySet().iterator(); //迭代器
+        if (key==null) {
+            while (i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (e.getKey()==null)
+                    return e.getValue();
+            }
+        } else {
+            while (i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (key.equals(e.getKey()))
+                    return e.getValue();
+            }
+        }
+        return null;
+    }
+```
+
+
+
+```java
+  public V put(K key, V value) {
+        throw new UnsupportedOperationException();
+    }
+
+```
+
+
+
+
+
+```java
+    public V remove(Object key) {
+        Iterator<Entry<K,V>> i = entrySet().iterator();
+        Entry<K,V> correctEntry = null;  //记录当前Entry的实体
+        if (key==null) { //如果key是null 走一种逻辑
+            while (correctEntry==null && i.hasNext()) {
+                Entry<K,V> e = i.next(); //得到entry
+                if (e.getKey()==null) //判断keynull
+                    correctEntry = e;
+            }
+        } else { //如果key 不是null 
+            while (correctEntry==null && i.hasNext()) {
+                Entry<K,V> e = i.next(); //得到一个entry
+                if (key.equals(e.getKey())) //判断key相等
+                    correctEntry = e;
+            }
+        }
+
+        V oldValue = null;
+        if (correctEntry !=null) {
+            oldValue = correctEntry.getValue();
+            i.remove();
+        }
+        return oldValue;
+    }
+```
+
+
+
+
+
+```java
+    public void putAll(Map<? extends K, ? extends V> m) {
+        for (Map.Entry<? extends K, ? extends V> e : m.entrySet())
+            put(e.getKey(), e.getValue());
+    }
+```
+
+
+
+
+
+```java
+  public void clear() {
+        entrySet().clear();
+    }
+
+```
+
+
+
+
+
+```java
+ public Set<K> keySet() {
+        Set<K> ks = keySet;
+        if (ks == null) { //如果keyset为null 
+            ks = new AbstractSet<K>() {  //定义一个匿名内部类
+                public Iterator<K> iterator() { //迭代器方法
+                    return new Iterator<K>() {
+                        private Iterator<Entry<K,V>> i = entrySet().iterator();
+
+                        public boolean hasNext() {
+                            return i.hasNext();
+                        }
+
+                        public K next() {
+                            return i.next().getKey();
+                        }
+
+                        public void remove() {
+                            i.remove();
+                        }
+                    };
+                }
+
+                public int size() { // 定义size方法
+                    return AbstractMap.this.size();
+                }
+
+                public boolean isEmpty() {  //定义isEmpty方法
+                    return AbstractMap.this.isEmpty();
+                }
+
+                public void clear() {  //定义clear方法
+                    AbstractMap.this.clear();
+                }
+
+                public boolean contains(Object k) { //定义contains方法
+                    return AbstractMap.this.containsKey(k);
+                }
+            };
+            keySet = ks;
+        }
+        return ks;
+    }
+```
+
+
+
+
+
+```java
+    public Collection<V> values() {
+        Collection<V> vals = values;
+        if (vals == null) {
+            vals = new AbstractCollection<V>() {
+                public Iterator<V> iterator() {
+                    return new Iterator<V>() {
+                        private Iterator<Entry<K,V>> i = entrySet().iterator();
+
+                        public boolean hasNext() {
+                            return i.hasNext();
+                        }
+
+                        public V next() {
+                            return i.next().getValue();
+                        }
+
+                        public void remove() {
+                            i.remove();
+                        }
+                    };
+                }
+
+                public int size() {
+                    return AbstractMap.this.size();
+                }
+
+                public boolean isEmpty() {
+                    return AbstractMap.this.isEmpty();
+                }
+
+                public void clear() {
+                    AbstractMap.this.clear();
+                }
+
+                public boolean contains(Object v) {
+                    return AbstractMap.this.containsValue(v);
+                }
+            };
+            values = vals;
+        }
+        return vals;
+    }
+```
+
+
+
+
+
+```java
+  public boolean equals(Object o) {
+        if (o == this) //判断是不是就是自己的引用
+            return true;
+
+        if (!(o instanceof Map)) //判断是不是Map
+            return false;
+        Map<?,?> m = (Map<?,?>) o; //类型转换
+        if (m.size() != size()) //如果两者的size 不同,那么一定不等
+            return false;
+
+        try {
+            Iterator<Entry<K,V>> i = entrySet().iterator(); //获取本类的迭代器对象
+            while (i.hasNext()) { //执行遍历操作
+                Entry<K,V> e = i.next(); 
+                K key = e.getKey();
+                V value = e.getValue();
+                if (value == null) { //如果value为null
+                    if (!(m.get(key)==null && m.containsKey(key)))
+                        return false;
+                } else { //否则比较value
+                    if (!value.equals(m.get(key)))
+                        return false;
+                }
+            }
+        } catch (ClassCastException unused) {
+            return false;
+        } catch (NullPointerException unused) {
+            return false;
+        }
+
+        return true;
+    }
+```
+
+
+
+
+
+```java
+   public int hashCode() {
+        int h = 0;
+        Iterator<Entry<K,V>> i = entrySet().iterator();
+        while (i.hasNext())
+            h += i.next().hashCode();
+        return h;
+    }
+```
+
+
+
+### 2.3.4 待子类实现的抽象方法
+
+```java
+    public abstract Set<Entry<K,V>> entrySet();
+```
+
+
+
+### 2.3.5 重写的Object中的方法
+
+```java
+    public String toString() {
+        Iterator<Entry<K,V>> i = entrySet().iterator();
+        if (! i.hasNext())
+            return "{}";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append('{');
+        for (;;) {
+            Entry<K,V> e = i.next();
+            K key = e.getKey();
+            V value = e.getValue();
+            sb.append(key   == this ? "(this Map)" : key);
+            sb.append('=');
+            sb.append(value == this ? "(this Map)" : value);
+            if (! i.hasNext())
+                return sb.append('}').toString();
+            sb.append(',').append(' ');
+        }
+    }
+
+
+    /**
+     * Returns a shallow copy of this <tt>AbstractMap</tt> instance: the keys
+     * and values themselves are not cloned.
+     *
+     * @return a shallow copy of this map
+     */
+    protected Object clone() throws CloneNotSupportedException {
+        AbstractMap<?,?> result = (AbstractMap<?,?>)super.clone();
+        result.keySet = null;
+        result.values = null;
+        return result;
+    }
+```
+
+
+
+## 2.4 HashMap
+
+> Hash table based implementation of the Map interface. This implementation provides all of the optional map operations, and permits null values and the null key. (The HashMap class is roughly equivalent to Hashtable, except that it is unsynchronized and permits nulls.) This class makes no guarantees as to the order of the map; in particular, it does not guarantee that the order will remain constant over time.
+>
+> 基于hashTable的Map接口实现. 本实现提供了所有的可选map操作, 并且允许null value 以及null key. (HashMap类大体上与HashTable等同, 除了HashMap是不支持并发访问的并且支持null). 本类没有对map中entry的顺序做任何的保证. 特别的, 不能保证顺序随着时间的推移保持不变. 
+>
+> This implementation provides constant-time performance for the basic operations (get and put), assuming the hash function disperses the elements properly among the buckets. Iteration over collection views requires time proportional to the "capacity" of the HashMap instance (the number of buckets) plus its size (the number of key-value mappings). Thus, it's very important not to set the initial capacity too high (or the load factor too low) if iteration performance is important.
+>
+> 本实现提供时间复杂度为常量时间的方法, 使用hash函数将元素分散到 bucket(桶)的各个位置. 对集合视图进行迭代所需的时间与 HashMap 实例的 "容量"（桶的数量）及其大小（键值映射的数量）成正比。因此，如果迭代性能很重要，就不能将初始容量设置得过高（或负载因子设置得过低），这一点非常重要。
+>
+> An instance of HashMap has two parameters that affect its performance: initial capacity and load factor. The capacity is the number of buckets in the hash table, and the initial capacity is simply the capacity at the time the hash table is created. The load factor is a measure of how full the hash table is allowed to get before its capacity is automatically increased. When the number of entries in the hash table exceeds the product of the load factor and the current capacity, the hash table is rehashed (that is, internal data structures are rebuilt) so that the hash table has approximately twice the number of buckets.
+>
+> 一个HashMap实例有两个因素会影响其表现: 初始化容量和负载因子. 容量指的是表中的桶数量, 初始化容量指的是hash表创建时的容量. 负载因子是评估在返回hash表之前评估需不需要对hash表的容量进行自动扩容的一个参数. 当hash表中entry的数量超过了负载因子以及当前的容量, 那么hash表将会进行rehash(即内部的数据结构进行了重构建) 使得hash表使得bucket(桶)的数量翻倍.
+>
+> As a general rule, the default load factor (.75) offers a good tradeoff between time and space costs. Higher values decrease the space overhead but increase the lookup cost (reflected in most of the operations of the HashMap class, including get and put). The expected number of entries in the map and its load factor should be taken into account when setting its initial capacity, so as to minimize the number of rehash operations. If the initial capacity is greater than the maximum number of entries divided by the load factor, no rehash operations will ever occur.
+>
+> 一个通用的规则, 默认的负载因子是0.75 能够在时间与空间上得到一个平衡. 更高的负载因子值降低了空间的溢出, 但是增加了查找的消耗(反应在大多数HashMap的操作中, 包括put和get操作). 当初始化容量时, map中期望的entry个数以及其负载因子需要被用于计算初始化容量, 以保证最小化rehash的次数. 
+>
+> If many mappings are to be stored in a HashMap instance, creating it with a sufficiently large capacity will allow the mappings to be stored more efficiently than letting it perform automatic rehashing as needed to grow the table. Note that using many keys with the same hashCode() is a sure way to slow down performance of any hash table. To ameliorate impact, when keys are Comparable, this class may use comparison order among keys to help break ties.
+>
+> 如果有较多的映射关系被HashMap储存, 那么创建一个有着足够容量的将会减少HashMap自动rehashing的次数. 需要注意的是, 多个不同的key都有着相同的hash code 会使得hash表的性能急剧下滑. 当键为 Comparable (可比较)时，该类可以使用键之间的比较顺序来帮助打破绑定。
+>
+> Note that this implementation is not synchronized. If multiple threads access a hash map concurrently, and at least one of the threads modifies the map structurally, it must be synchronized externally. (A structural modification is any operation that adds or deletes one or more mappings; merely changing the value associated with a key that an instance already contains is not a structural modification.) This is typically accomplished by synchronizing on some object that naturally encapsulates the map. If no such object exists, the map should be "wrapped" using the Collections.synchronizedMap method. This is best done at creation time, to prevent accidental unsynchronized access to the map:
+>  Map m = Collections.synchronizedMap(new HashMap(...));
+>
+> 需要注意的是本实现不是线程安全的. 如果存在多线程并发的访问本map, 并且有超过一个线程在modify本map, 那么必须在外部保证同步. (一个结构性的modification指的是任意可以添加或者删除多个映射关系). 这种功能常常被具有同步功能的对象包裹方法完成. 如果没有这样的对象存在, 那么该map应该使用 Collections.synchronizedMap 方法来被包裹. 这些事情最好是在创建的时候完成, 来避免可能存在的没有确保同步的访问map:
+>
+> Map m = Collections.synchronizedMap(new HashMap(...));
+>
+> The iterators returned by all of this class's "collection view methods" are fail-fast: if the map is structurally modified at any time after the iterator is created, in any way except through the iterator's own remove method, the iterator will throw a ConcurrentModificationException. Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
+>
+> 本类返回的"Collection 视图方法"迭代器有着fail-fast 特性: 如果map在返回一个迭代器对象后发生结构性的改变, 无论如何都会抛出ConcurrentModificationException(除了自己调用的remove). 因此, 在面对并发修改时, 迭代器可以快速,简洁的失败, 而不是冒着可能随时存在的, 未被定义的行为, 在未来的任意时刻.
+>
+> Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
+>
+> 需要注意的是迭代器的fail-fast行为不能够保证未同步的并发修改行为不出现. Fail-fast 迭代器抛出ConcurrentModificationException 异常基于最大努力基础. 因此, 想要依赖该异常来控制并发的编码方式是错误的: fail-fast行为应该只用于检测bug.
 
 
 
